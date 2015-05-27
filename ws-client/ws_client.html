@@ -12,9 +12,11 @@
 	var users = [];
 	var userHeartBeat = 0;
 	var pingHeartBeatId = 0;
-	var _heartBeatTime = 10000;
-	var _pingRefreshTime = 10000;
+	var _heartBeatTime = 20000;
+	var _pingRefreshTime = 20000;
 	var connectedStatusMessages = ["not connected", "waiting", "game requested", "accepting", "playing"];
+	var keyUp, keyDown, keyLeft, keyRight = false;
+	var canvas, context, width, height, imgp;
 	// connected status
 	// 0: not connected
 	// 1: connected and viewing user list
@@ -25,26 +27,51 @@
 	window.addEventListener("load", eventWindowLoaded, false);
 	function eventWindowLoaded() {
 		username = $("#usernameField").val();
+		canvas = document.getElementById("gameCanvas");
+		context = canvas.getContext("2d");
+		width = canvas.width;
+		height = canvas.height;
+		context.fillStyle = "#bbbbbb";
+		context.fillRect(0, 0, width, height);
+		imgp = context.createImageData(1,1);
+		var pixel = imgp.data;
+		pixel[3] = 255; // alpha channel
+  		
 		document.onkeydown = function(e) {
 					e = e?e:window.event;
 					console.log(e.keyCode + " pressed");
 			
 					switch(e.keyCode) {
 						case 38: //up arrow
-							$("#keyUP").attr('class', 'pressed');
-							sendKey("up", "on");
+							if (!keyUp) {
+								$("#keyUP").attr('class', 'pressed');
+								sendKey("up", "on");
+								keyUp = true;
+							}
 							break;
 						case 40: // down arrow
-							$("#keyDOWN").attr('class', 'pressed');
-							sendKey("down", "on");
+							if (!keyDown) {
+								$("#keyDOWN").attr('class', 'pressed');
+								sendKey("down", "on");
+								keyDown = true;
+							}
 							break;
 						case 37: // left arrow
-							$("#keyLEFT").attr('class', 'pressed');
-							sendKey("left", "on");
+							if (!keyLeft) {
+								$("#keyLEFT").attr('class', 'pressed');
+								sendKey("left", "on");
+								keyLeft = true;
+							}
 							break;
 						case 39: //right arrow
-							$("#keyRIGHT").attr('class', 'pressed');
-							sendKey("right", "on");
+							if (!keyRight) {
+								$("#keyRIGHT").attr('class', 'pressed');
+								sendKey("right", "on");
+								keyRight = true;
+							}
+							break;
+						case 83: // 's' key
+							Socket.send("startgame|" + username);
 							break;
 					}
 				}
@@ -54,20 +81,32 @@
 			
 					switch(e.keyCode) {
 						case 38: //up arrow
-							$("#keyUP").attr('class', 'unpressed');
-							sendKey("up", "off");
+							if (keyUp) {
+								$("#keyUP").attr('class', 'unpressed');
+								sendKey("up", "off");
+								keyUp = false;
+						    }
 							break;
 						case 40: // down arrow
-							$("#keyDOWN").attr('class', 'unpressed');
-							sendKey("down", "off");
+							if (keyDown) {
+								$("#keyDOWN").attr('class', 'unpressed');
+								sendKey("down", "off");
+								keyDown = false;
+							}
 							break;
 						case 37: // left arrow
-							$("#keyLEFT").attr('class', 'unpressed');
-							sendKey("left", "off");
+							if (keyLeft) {
+								$("#keyLEFT").attr('class', 'unpressed');
+								sendKey("left", "off");
+								keyLeft = false;
+							}
 							break;
 						case 39: //right arrow
-							$("#keyRIGHT").attr('class', 'unpressed');
-							sendKey("right", "off");
+							if (keyRight) {
+								$("#keyRIGHT").attr('class', 'unpressed');
+								sendKey("right", "off");
+								keyRight = false;
+							}
 							break;
 					}
 				}
@@ -146,6 +185,11 @@
 					drawUsersTable();
 				}
 				
+				if(responseObject.msg=="positions") {
+					data = responseObject.data;
+					updatePositions(data);
+				}
+				
 				if(responseObject.msg=="pong") {
 					d1 = parseInt(responseObject.data);
 					d2 = new Date().getTime();
@@ -209,6 +253,15 @@
 	function requestUserList() {
 		if (connected) {
 			Socket.send("list");
+		}
+	}
+	
+	function updatePositions(data) {
+		console.log("Updating positions: ");
+		for (i in data) {
+			playerX = data[i].x;
+			playerY = data[i].y;
+			context.putImageData(imgp, playerX, playerY);
 		}
 	}
 	
@@ -285,7 +338,7 @@
 	Server: 
 	<select id="server">
 		<option value="127.0.0.1:1337" selected>127.0.0.1:1337</option>
-		<option value="www.devicecloud.co.uk:1337">www.devicecloud.co.uk:1337</option>		
+		<option value="www.rashley.co.uk:1337">www.devicecloud.co.uk:1337</option>		
 	</select><span id="connectedStatusField">not connected</span>
 	
 	<br/>

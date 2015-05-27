@@ -15,6 +15,8 @@
 	var _heartBeatTime = 10000;
 	var _pingRefreshTime = 10000;
 	var connectedStatusMessages = ["not connected", "waiting", "game requested", "accepting", "playing", "viewing"];
+	var canvas, context, width, height, imgp;
+	
 	// connected status
 	// 0: not connected
 	// 1: connected and viewing user list
@@ -27,6 +29,15 @@
 	
 	function eventWindowLoaded() {
 		// Initialise stuff...
+		canvas = document.getElementById("gameCanvas");
+		context = canvas.getContext("2d");
+		width = canvas.width;
+		height = canvas.height;
+		context.fillStyle = "#bbbbbb";
+		context.fillRect(0, 0, width, height);
+		imgp = context.createImageData(1,1);
+		var pixel = imgp.data;
+		pixel[3] = 255; // alpha channel
 	}
 	
 	function connect() {
