@@ -1,0 +1,23 @@
+body
+{
+font-size:75%;
+font-family:verdana,arial,'sans serif';
+background-repeat:repeat-x;
+background-color:#79bad6;
+color:#000080;
+margin:10px;
+}
+
+h1 {font-size:200%;}
+h2 {font-size:140%;}
+h3 {font-size:110%;}
+
+th {background-color:#ADD8E6;}
+
+ul {list-style:circle;}
+ol {list-style:decimal;}
+
+a:link {color:#000080;}
+a:hover {color:red;}
+
+.footer {color:#eeeeee;font-style:italic;}
