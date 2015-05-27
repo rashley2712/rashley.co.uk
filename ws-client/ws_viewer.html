@@ -1,0 +1,222 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="ws_styles.css">
+<script src="utils.js"></script>
+<script src="jquery.min.js"></script>
+<script type="text/javascript">
+	var serverURL = "";
+	var Socket;
+	var connected = 0;
+	var username;
+	var requestedUser;
+	var users = [];
+	var userHeartBeat = 0;
+	var pingHeartBeatId = 0;
+	var _heartBeatTime = 10000;
+	var _pingRefreshTime = 10000;
+	var connectedStatusMessages = ["not connected", "waiting", "game requested", "accepting", "playing", "viewing"];
+	// connected status
+	// 0: not connected
+	// 1: connected and viewing user list
+	// 2: waiting for a game request to be accepted
+	// 3: pending accept of a game request
+	// 4: playing a game
+	// 5: viewing the meeting room
+	
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	function eventWindowLoaded() {
+		// Initialise stuff...
+	}
+	
+	function connect() {
+		if(!connected) {
+			serverURL = document.getElementById("server").value;
+			debug("connecting to server...[" + serverURL + "]");
+			Socket = new WebSocket("ws://" + serverURL);
+
+			Socket.onopen = function () {
+				$('#connectButton').text("Disconnect");
+				$('#usernameField').toggleClass("connected", true);
+				username = 'viewer';
+				Socket.send("connect|" + username);
+			}
+
+			Socket.onclose = function() {
+				debug("The connection has been closed...");
+				changeConnectedStatus(0);
+				users = [];
+				drawUsersTable();
+				$('#connectButton').text("Connect");
+				$('#usernameField').toggleClass("connected", false);
+ 			}
+			
+			Socket.onmessage = function(message) {
+				debug("received a message....");
+				console.log(message);
+				var response = message.data;
+				var responseObject = JSON.parse(response);
+				console.log(response);
+				console.log(responseObject);
+				console.log("msg :" + responseObject.msg);
+				var status = String("[" + responseObject.msg +"] " + responseObject.data);
+				debug(status);
+				
+				// Handle the different responses from the server....
+				if (responseObject.msg=="connected") {
+					debug("Connection acknowledged.");
+					changeConnectedStatus(1);
+					requestUserList();
+				}
+				
+				if (responseObject.msg=="users") {
+					users = [];
+					for (i in responseObject.data) {
+						var userObject = {username: null, status: 0, ping: null};
+						userObject.ping = responseObject.data[i].ping;
+						userObject.username = responseObject.data[i].username;
+						userObject.status = responseObject.data[i].status;
+						users.push(userObject);
+					}
+					console.log(users);
+					drawUsersTable();
+				}
+				
+				if (responseObject.msg=="keypress") {
+					data = responseObject.msg;
+					console.log(responseObject);
+					player = responseObject.data.player;
+					direction = responseObject.data.direction;
+					status = responseObject.data.status;
+					debug("keypress: " + player + " -> " + direction + "[" + status + "]");
+					updateKeyMap(player, direction, status);
+				}
+				
+			}
+
+			Socket.onerror = function() {
+				debug("Error: Could not open socket connection.");
+				changeConnectedStatus(0);	
+				if (userHeartBeat!=0) {
+					clearInterval(userHeartBeat);
+					userHeartBeat = 0;
+				}			
+			}
+		} else {
+			debug("Disconnecting from the server.");
+			Socket.close();
+		}
+	}
+	
+	function sendMessage() {
+		console.log("Socket readyState  : " + Socket.readyState);
+		console.log("Sending a message...");
+		Socket.send("Hello world!");
+	}
+	
+	function requestUserList() {
+		if (connected) {
+			Socket.send("list");
+		}
+	}
+	
+	function drawUsersTable() {
+		// Draws the list of connected users
+		var tableHTML = "";
+		
+		tableHTML+="<table class='userlist' width='100%'>";
+		
+		for (i in users) {
+			tableHTML+='<tr class="status_connected" onclick="setRequestedUser(\'' + users[i].username + '\')" id="user_' + users[i].username + '">';
+			tableHTML+="<td>" + users[i].username + " </td><td>" + connectedStatusMessages[users[i].status] + "</td><td>" + users[i].ping + " ms</td>"
+			tableHTML+="</tr>";
+		}
+		
+		
+		tableHTML+="</table>";
+		
+		console.log(tableHTML);
+		$("#netStatusCell").html(tableHTML);
+		$('#user_' + requestedUser).toggleClass("highlighted", true);
+	}
+	
+
+	function changeConnectedStatus(newval) {
+		connected = newval;
+		debug("changing connected status to: [" + connected + "] " + connectedStatusMessages[connected]);
+		Socket.send("updatestatus|"+ connected);
+		$("#connectedStatusField").text(connectedStatusMessages[connected]);
+	}
+	
+	function updateKeyMap(player, direction, status) {
+		if (direction=='up') {
+			if (status=='on') $("#keyUP").attr('class', 'pressed');
+			if (status=='off') $("#keyUP").attr('class', 'unpressed');
+		}
+		if (direction=='down') {
+			if (status=='on') $("#keyDOWN").attr('class', 'pressed');
+			if (status=='off') $("#keyDOWN").attr('class', 'unpressed');
+		}
+		if (direction=='left') {
+			if (status=='on') $("#keyLEFT").attr('class', 'pressed');
+			if (status=='off') $("#keyLEFT").attr('class', 'unpressed');
+		}
+		if (direction=='right') {
+			if (status=='on') $("#keyRIGHT").attr('class', 'pressed');
+			if (status=='off') $("#keyRIGHT").attr('class', 'unpressed');
+		}
+		
+	}
+	
+</script>
+
+	<title>WebSocket client - Viewer</title>
+</head>
+<body>
+	<p>WebSocket client - Viewer</p>
+	Server: 
+	<select id="server">
+		<option value="127.0.0.1:1337" selected>127.0.0.1:1337</option>
+		<option value="www.rashley.co.uk:1337">www.rashley.co.uk:1337</option>		
+	</select><span id="connectedStatusField">not connected</span>
+	<button id="connectButton" onclick="connect()">Connect</button>
+	
+	<br/>
+	<p>
+		Text: <input type="text" id="textBox" placeholder="your text"/>
+		<input type="button" value="Send" id="sendButton" onclick="sendMessage()"/>
+	</p>
+	<table width="100%" border="1">
+		<tr>
+			<td id="gameCanvasCell" width="60%">
+				<canvas id="gameCanvas" width="400" height="400">Your browser does not support HTML5 Canvas</canvas>
+			</td>
+			<td style="vertical-align:top;width:40%">
+				<span id="netStatusCell"><i>...not connected...</i>
+				</span>
+			
+			<table id="keypress" border="1">
+				<tr>
+					<td>&nbsp;</td>
+					<td class='unpressed' id="keyUP">up</td>
+					<td>&nbsp;</td>
+				</tr>
+				<tr>
+					<td class='unpressed'  id="keyLEFT">left</td>
+					<td class='unpressed'  id="keyDOWN">down</td>
+					<td class='unpressed'  id="keyRIGHT">right</td>
+				</tr>
+			</table>
+			
+			</td>
+		</tr>
+	</table>
+	<hr>
+	<p class="debugstyle">
+		<span id="debugPanel"></span>
+	</p>
+	
+</body>
+
+
+</html>

@@ -36,3 +36,11 @@
 .not_connected {
 	background-color: #EE9999;
 }
+
+.pressed {
+	background-color: #EE9999;
+}
+
+.unpressed {
+	background-color: #FFFFFF;
+}

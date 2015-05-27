@@ -1,0 +1,334 @@
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="ws_styles.css">
+<script src="utils.js"></script>
+<script src="jquery.min.js"></script>
+<script type="text/javascript">
+	var serverURL = "";
+	var Socket;
+	var connected = 0;
+	var username;
+	var requestedUser;
+	var users = [];
+	var userHeartBeat = 0;
+	var pingHeartBeatId = 0;
+	var _heartBeatTime = 10000;
+	var _pingRefreshTime = 10000;
+	var connectedStatusMessages = ["not connected", "waiting", "game requested", "accepting", "playing"];
+	// connected status
+	// 0: not connected
+	// 1: connected and viewing user list
+	// 2: waiting for a game request to be accepted
+	// 3: pending accept of a game request
+	// 4: playing a game
+	
+	window.addEventListener("load", eventWindowLoaded, false);
+	function eventWindowLoaded() {
+		username = $("#usernameField").val();
+		document.onkeydown = function(e) {
+					e = e?e:window.event;
+					console.log(e.keyCode + " pressed");
+			
+					switch(e.keyCode) {
+						case 38: //up arrow
+							$("#keyUP").attr('class', 'pressed');
+							sendKey("up", "on");
+							break;
+						case 40: // down arrow
+							$("#keyDOWN").attr('class', 'pressed');
+							sendKey("down", "on");
+							break;
+						case 37: // left arrow
+							$("#keyLEFT").attr('class', 'pressed');
+							sendKey("left", "on");
+							break;
+						case 39: //right arrow
+							$("#keyRIGHT").attr('class', 'pressed');
+							sendKey("right", "on");
+							break;
+					}
+				}
+				document.onkeyup = function(e) {
+					e = e?e:window.event;
+					console.log(e.keyCode + " released");
+			
+					switch(e.keyCode) {
+						case 38: //up arrow
+							$("#keyUP").attr('class', 'unpressed');
+							sendKey("up", "off");
+							break;
+						case 40: // down arrow
+							$("#keyDOWN").attr('class', 'unpressed');
+							sendKey("down", "off");
+							break;
+						case 37: // left arrow
+							$("#keyLEFT").attr('class', 'unpressed');
+							sendKey("left", "off");
+							break;
+						case 39: //right arrow
+							$("#keyRIGHT").attr('class', 'unpressed');
+							sendKey("right", "off");
+							break;
+					}
+				}
+	
+	}
+		
+	function refreshUsersHeartBeat() {
+		// This is called at regular intervals to refresh the list of connected users. 
+		requestUserList();
+		drawUsersTable();
+	}
+	
+	function pingHeartBeat() {
+		// This is called at regular intervals to measure the roundtrip ping and then inform the server
+		measurePing();
+	}
+	
+	function connect() {
+		if(!connected) {
+			serverURL = document.getElementById("server").value;
+			debug("connecting to server...[" + serverURL + "]");
+			Socket = new WebSocket("ws://" + serverURL);
+
+			Socket.onopen = function () {
+				//console.log("A connection has been opened...");
+				//console.log(Socket);
+				//console.log("Socket readyState : " + Socket.readyState);
+				$('#connectButton').text("Disconnect");
+				$('#usernameField').toggleClass("connected", true);
+				Socket.send("connect|" + username);
+			}
+
+			Socket.onclose = function() {
+				debug("The connection has been closed...");
+				changeConnectedStatus(0);
+				clearInterval(userHeartBeat);
+				userHeartBeat = 0;
+				clearInterval(pingHeartBeatId);
+				pingHeartBeatId = 0;
+				users = [];
+				drawUsersTable();
+				$('#connectButton').text("Connect");
+				$('#usernameField').toggleClass("connected", false);
+ 			}
+			
+			Socket.onmessage = function(message) {
+				debug("received a message....");
+				console.log(message);
+				var response = message.data;
+				var responseObject = JSON.parse(response);
+				console.log(response);
+				console.log(responseObject);
+				console.log("msg :" + responseObject.msg);
+				var status = String("[" + responseObject.msg +"] " + responseObject.data);
+				debug(status);
+				
+				// Handle the different responses from the server....
+				if (responseObject.msg=="connected") {
+					debug("Connection acknowledged.");
+					changeConnectedStatus(1);
+					requestUserList();
+					pingHeartBeatId = setInterval(pingHeartBeat, _pingRefreshTime);	
+					userHeartBeat = setInterval(refreshUsersHeartBeat, _heartBeatTime);			
+				}
+				
+				if (responseObject.msg=="users") {
+					users = [];
+					for (i in responseObject.data) {
+						var userObject = {username: null, status: 0, ping: null};
+						userObject.ping = responseObject.data[i].ping;
+						userObject.username = responseObject.data[i].username;
+						userObject.status = responseObject.data[i].status;
+						users.push(userObject);
+					}
+					console.log(users);
+					drawUsersTable();
+				}
+				
+				if(responseObject.msg=="pong") {
+					d1 = parseInt(responseObject.data);
+					d2 = new Date().getTime();
+					pingTime = d2 - d1;
+					debug("measured ping time: " + pingTime);
+					setPing(pingTime);
+				}
+				
+				if(responseObject.msg=="gamerequest") {
+					var requestFromUser = responseObject.data;
+					debug("gamerequest: " + status);
+					$('#requestedPlayer').text(requestFromUser + " has requested a game");
+					$('#requestGameButton').text("Accept");
+					changeConnectedStatus(3);
+				}
+			}
+
+			Socket.onerror = function() {
+				debug("Error: Could not open socket connection.");
+				changeConnectedStatus(0);	
+				if (userHeartBeat!=0) {
+					clearInterval(userHeartBeat);
+					userHeartBeat = 0;
+				}			
+			}
+		} else {
+			debug("Disconnecting from the server.");
+			Socket.close();
+		}
+	}
+	
+	function sendMessage() {
+		console.log("Socket readyState  : " + Socket.readyState);
+		console.log("Sending a message...");
+		Socket.send("Hello world!");
+	}
+	
+	function setPing(pingTime){
+		// Tell the server what my round trip ping time is (this is called after receiving a ping echo [or 'pong'])
+		Socket.send("setping|" + pingTime);
+	}
+	
+	function sendKey(direction, status) {
+		if (connected) {
+			Socket.send("keypress|" + direction + "|" + status);
+		}
+	}
+	
+	function measurePing() {
+		if (connected) {
+			var d = new Date();
+			var ms = d.getTime();
+			Socket.send("ping|" + ms);
+		}
+	}
+	
+	function updateUsername() {
+		username = $("#usernameField").val();
+	}
+	
+	function requestUserList() {
+		if (connected) {
+			Socket.send("list");
+		}
+	}
+	
+	function drawUsersTable() {
+		// Draws the list of connected users
+		var tableHTML = "";
+		
+		tableHTML+="<table class='userlist' width='100%'>";
+		
+		for (i in users) {
+			tableHTML+='<tr class="status_connected" onclick="setRequestedUser(\'' + users[i].username + '\')" id="user_' + users[i].username + '">';
+			tableHTML+="<td>" + users[i].username + " </td><td>" + connectedStatusMessages[users[i].status] + "</td><td>" + users[i].ping + " ms</td>"
+			tableHTML+="</tr>";
+		}
+		
+		
+		tableHTML+="</table>";
+		
+		console.log(tableHTML);
+		$("#netStatusCell").html(tableHTML);
+		$('#user_' + requestedUser).toggleClass("highlighted", true);
+	}
+	
+	function setRequestedUser(usernameInput) {
+		console.log("choosing the user: " + usernameInput);
+		if(usernameInput == requestedUser) {
+			// Toggle user request off
+			requestedUser = "";
+			$('#user_' + usernameInput).toggleClass("highlighted", false);
+			$('#requestedPlayer').html("<i>...select one...</i>");
+			return;
+		}
+		if(usernameInput == username) {
+			$('#requestedPlayer').html("<i>... not yourself! ... </i>");
+			return;
+		}
+		
+		// Unselect the previous selected user
+		$('#user_' + requestedUser).toggleClass("highlighted", false);
+		
+		// Display the name of the new selected user
+		$('#requestedPlayer').html(usernameInput);
+		
+		// Highlight the selected player in the table...
+		$('#user_' + usernameInput).toggleClass("highlighted", true);
+		requestedUser = usernameInput;
+	}
+	
+	function requestGame() {
+		if(!connected || requestedUser=="" || requestedUser=="") return;
+		Socket.send("requestgame|" + requestedUser); 
+		changeConnectedStatus(2);
+	}
+	
+	function changeConnectedStatus(newval) {
+		connected = newval;
+		debug("changing connected status to: [" + connected + "] " + connectedStatusMessages[connected]);
+		Socket.send("updatestatus|"+ connected);
+		$("#connectedStatusField").text(connectedStatusMessages[connected]);
+	}
+	
+
+	function acceptGame() {
+		if (connected!=3) return;
+		Socket.send()
+	}
+	
+</script>
+
+	<title>WebSocket client early test</title>
+</head>
+<body>
+	<p>WebSocket client early test</p>
+	Server: 
+	<select id="server">
+		<option value="127.0.0.1:1337" selected>127.0.0.1:1337</option>
+		<option value="www.devicecloud.co.uk:1337">www.devicecloud.co.uk:1337</option>		
+	</select><span id="connectedStatusField">not connected</span>
+	
+	<br/>
+	<p>
+		Text: <input type="text" id="textBox" placeholder="your text"/>
+		<input type="button" value="Send" id="sendButton" onclick="sendMessage()"/>
+	</p>
+	<table width="100%" border="1">
+		<tr>
+			<td id="gameCanvasCell" width="60%">
+				<canvas id="gameCanvas" width="400" height="400">Your browser does not support HTML5 Canvas</canvas>
+			</td>
+			<td style="vertical-align:top;width:40%">
+				username: <input type="text" id="usernameField" value="rashley" onchange="updateUsername()"/>
+				<button id="connectButton" onclick="connect()">Connect</button>
+				<br/>
+				player: <span id='requestedPlayer'><i>...select one...</i></span>
+				<button id="requestGameButton" onclick="requestGame()">Request a game</button>
+				<span id="netStatusCell"><em>...not connected...</em>
+				</span>
+				<table id="keypress" border="1">
+					<tr>
+						<td>&nbsp;</td>
+						<td class='unpressed' id="keyUP">up</td>
+						<td>&nbsp;</td>
+					</tr>
+					<tr>
+						<td class='unpressed'  id="keyLEFT">left</td>
+						<td class='unpressed'  id="keyDOWN">down</td>
+						<td class='unpressed'  id="keyRIGHT">right</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+	
+	
+	<hr>
+	<p class="debugstyle">
+		<span id="debugPanel"></span>
+	</p>
+	
+</body>
+
+
+</html>
