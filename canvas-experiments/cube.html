@@ -1,0 +1,407 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Cube in 3D</title>
+
+<script src="modernizr.js"></script>
+<script type="text/javascript">
+	// Set up everything when the page had finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+
+	// Some global variables
+	var theCanvas; 
+	var context;
+	var width; 
+	var height;
+	var imgd;
+	var scale;
+	var rxstep = 0;
+	var rzstep = 0;
+	var rystep = 0;
+	var observer = {x: 0, y: 0, z: 8};
+	var light = {x: 10, y: 4, z: 10};
+	var mouseDown = false;
+	var old_x;
+	var old_y;
+	
+	var vertices = new Array();
+	var lines = new Array();
+	var surfaces = new Array();
+	var indexedSurfaces = new Array();
+	
+	var RxElement;
+	var RzElement;
+	var RyElement;
+
+	function eventWindowLoaded() {
+		initCanvas();
+		clearCanvas();
+		defineCube();
+		determineExtents();
+		RxElement = document.getElementById("rxElement");
+		RxElement.innerText = rxstep;
+		RyElement = document.getElementById("ryElement");
+		RyElement.innerText = rystep;
+		RzElement = document.getElementById("rzElement");
+		RzElement.innerText = rzstep;
+		
+		rotate_x(10);
+		rotate_z(5);
+		rotate_y(1);
+		drawShapeBySurfaces();
+		startUp();
+	}
+	
+	function intersectPlaneZ5(point) {
+		var t;
+		var intersection;
+		t = (5 - observer.z) / (observer.z - point.z);
+		intersection = { x: (observer.x + t*(observer.x-point.x)), y: (observer.y + t*(observer.y-point.y))};
+		return intersection;
+	}
+	
+	function subtractVector(s1, s2) {
+		return {x: s1.x - s2.x, y: s1.y - s2.y, z: s1.z - s2.z};
+	}
+	
+	function unitNormal(surface) {
+		//returns the unitNormal vector of the surface
+		v1 = {x: vertices[surface.v1].x, y: vertices[surface.v1].y, z: vertices[surface.v1].z};
+		v2 = {x: vertices[surface.v2].x, y: vertices[surface.v2].y, z: vertices[surface.v2].z};
+		v3 = {x: vertices[surface.v3].x, y: vertices[surface.v3].y, z: vertices[surface.v3].z};
+		a = subtractVector(v1, v2);
+		b = subtractVector(v3, v2);
+		x = a.y*b.z - a.z*b.y;
+		y = a.z*b.x - a.x*b.z;
+		z = a.x*b.y - a.y*b.x;
+		
+		mod = Math.sqrt(x*x + y*y + z*z);
+		
+		x = x/mod;
+		y = y/mod;
+		z = z/mod;
+		
+		return {x: x, y: y, z: z};
+	}
+	
+
+
+	function defineVertex(x,y,z) {
+		var vertex;
+		vertex = {x: x, y: y, z: z};
+		vertices.push(vertex);
+		return vertices.length;
+	}
+	
+	function defineLine(from, to) {
+		var line;
+		line = {from: from, to: to};
+		lines.push(line);
+		return lines.length;
+	}
+
+	function defineSurface(v1, v2, v3, v4) {
+		var surface;
+		surface = {v1: v1, v2: v2, v3: v3, v4: v4};
+		surfaces.push(surface);
+		return surfaces.length;
+	}
+
+	
+	function defineCube() {
+		var vertex;
+		defineVertex(-1,-1,-1);
+		defineVertex( 1,-1,-1);
+		defineVertex( 1, 1,-1);
+		defineVertex(-1, 1,-1);
+		defineVertex(-1,-1, 1);
+		defineVertex( 1,-1, 1);
+		defineVertex( 1, 1, 1);
+		defineVertex(-1, 1, 1);
+		console.log("Made a shape with " + vertices.length + " vertices.");
+
+		defineLine( 0, 1);
+		defineLine( 1, 2);
+		defineLine( 2, 3);
+		defineLine( 3, 0);
+		defineLine( 4, 5);
+		defineLine( 5, 6);
+		defineLine( 6, 7);
+		defineLine( 7, 4);
+		defineLine( 0, 4);
+		defineLine( 1, 5);
+		defineLine( 2, 6);
+		defineLine( 7, 3);
+		console.log("Defined " + lines.length + " lines.");
+		
+		defineSurface( 0, 1, 2, 3);
+		defineSurface( 2, 3, 7, 6);
+		defineSurface( 1, 2, 6, 5);
+		defineSurface( 0, 3, 7, 4);
+		defineSurface( 1, 0, 4, 5);
+		defineSurface( 4, 5, 6, 7);
+		console.log("Defined " + surfaces.length + " surfaces.");
+	}
+
+	function startUp(){ 
+		setInterval(animate, 20);
+	}
+	
+	
+	function determineExtents() {
+		// Finds the zoom factor and scaling transformations for the co-ordinate system.
+		scale = height / 2; 
+	}
+		
+	function rotate_z(angle) {
+		var theta = angle/180*Math.PI;
+		var sintheta = Math.sin(theta);
+		var costheta = Math.cos(theta);
+		for (var i in vertices) {
+			var temp_x = vertices[i].x * costheta - vertices[i].y * sintheta;
+			vertices[i].y = vertices[i].x * sintheta + vertices[i].y * costheta;
+			vertices[i].x = temp_x;
+		}
+		
+	}
+	
+	function rotate_x(angle) {
+		var theta = angle/180*Math.PI;
+		var sintheta = Math.sin(theta);
+		var costheta = Math.cos(theta);
+		for (var i in vertices) {
+			var temp_y = vertices[i].y * costheta - vertices[i].z * sintheta;
+			vertices[i].z = vertices[i].y * sintheta + vertices[i].z * costheta;
+			vertices[i].y = temp_y;
+		}
+		
+	}
+
+	function rotate_y(angle) {
+		var theta = angle/180*Math.PI;
+		var sintheta = Math.sin(theta);
+		var costheta = Math.cos(theta);
+		for (var i in vertices) {
+			var temp_x = vertices[i].x * costheta - vertices[i].z * sintheta;
+			vertices[i].z = vertices[i].x * sintheta + vertices[i].z * costheta;
+			vertices[i].x = temp_x;
+		}	
+	}
+	
+	function surfaceCentroid(surface) {
+		// Returns the coordinates of the centroid of the surface
+		var cx = (vertices[surface.v1].x + vertices[surface.v2].x + vertices[surface.v3].x + vertices[surface.v4].x) / 4;
+		var cy = (vertices[surface.v1].y + vertices[surface.v2].y + vertices[surface.v3].y + vertices[surface.v4].y) / 4;
+		var cz = (vertices[surface.v1].z + vertices[surface.v2].z + vertices[surface.v3].z + vertices[surface.v4].z) / 4;
+		return {x: cx, y: cy, z: cz}
+	}
+	
+	function unitise(v) {
+		// returns unit vector
+		var mod = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+		return {x: v.x/mod, y: v.y / mod, z: v.z/mod};
+	}
+	
+	function incidentLight(surface, observer) {
+		// Calculates incident light on the surface
+		
+		// unit vector to the light source
+		l = unitise(subtractVector(surfaceCentroid(surface), observer));
+		
+		s = unitNormal(surface);
+		dot = l.x * s.x + l.y * s.y + l.z * s.z;
+		dot = Math.abs(dot);
+		console.log("Dot product: " + dot);
+		return dot;
+	}
+	
+	function observerDistance(surface) {
+		// Calculates the distance between the surface centroid and the observer
+		var c = surfaceCentroid(surface);
+		var dx = (c.x - observer.x) * (c.x - observer.x);
+		var dy = (c.y - observer.y) * (c.y - observer.y);
+		var dz = (c.z - observer.z) * (c.z - observer.z);
+		
+		return Math.sqrt(dx + dy + dz); 
+	}
+	
+	function sortSurfaces() {
+		indexedSurfaces.length = 0;
+		for (var i in surfaces) {
+			surfaceIndex = {depth: observerDistance(surfaces[i]), index: i};
+			indexedSurfaces.push(surfaceIndex);
+		}
+		indexedSurfaces.sort(function(a,b) { return b.depth - a.depth; });
+	}
+	
+	function drawShapeBySurfaces() {
+		sortSurfaces();
+		for (var i in surfaces) {
+			j = indexedSurfaces[i].index;
+			var p1 = intersectPlaneZ5(vertices[surfaces[j].v1]);
+			var p2 = intersectPlaneZ5(vertices[surfaces[j].v2]);
+			var p3 = intersectPlaneZ5(vertices[surfaces[j].v3]);
+			var p4 = intersectPlaneZ5(vertices[surfaces[j].v4]);
+			context.beginPath();
+			context.moveTo(xToCanvas(p1.x), yToCanvas(p1.y));
+			context.lineTo(xToCanvas(p2.x), yToCanvas(p2.y));
+			context.lineTo(xToCanvas(p3.x), yToCanvas(p3.y));
+			context.lineTo(xToCanvas(p4.x), yToCanvas(p4.y));
+			context.closePath();
+			context.stroke();
+			context.fillStyle = 'rgb(' + Math.floor(128+128*incidentLight(surfaces[j], light)) + ', 0 ,0)';
+			//context.fillStyle="red";
+			context.fill();
+		}
+	}
+	
+	
+	function drawShape() {
+		var startpoint; 
+		var endpoint;
+		
+		context.beginPath();
+		for(var i=0; i< lines.length; i++) {
+			point = {x: vertices[lines[i].from].x, y: vertices[lines[i].from].y, z: vertices[lines[i].from].z};
+			startpoint = intersectPlaneZ5(point);
+			point = { x: vertices[lines[i].to].x, y: vertices[lines[i].to].y, z: vertices[lines[i].to].z}
+			endpoint = intersectPlaneZ5(point);
+			context.moveTo(xToCanvas(startpoint.x), yToCanvas(startpoint.y));
+			context.lineTo(xToCanvas(endpoint.x), yToCanvas(endpoint.y));
+		}
+		context.stroke();
+		context.closePath();
+		
+	}
+	
+	function animate() {
+		clearCanvas();
+		rotate_z(rzstep);
+		rotate_x(rxstep);
+		rotate_y(rystep);
+		drawShapeBySurfaces();
+	}
+	
+	function changeRx(delta) {
+		rxstep+= delta;
+		RxElement.innerText = rxstep;
+	}
+
+	function changeRz(delta) {
+		rzstep+= delta;
+		RzElement.innerText = rzstep;
+	}
+
+	function changeRy(delta) {
+		rystep+= delta;
+		RyElement.innerText = rystep;
+	}
+
+	
+	function yToCanvas(y) {
+		var ypos = height/2 - y * scale;
+		return ypos;
+	}
+
+	function xToCanvas(x) {
+		var xpos = width/2 + x * scale;
+		return xpos;
+	}
+		
+	function canvasSupport() {
+		return Modernizr.canvas;
+	}
+	
+	
+	function clearCanvas() {
+		// Clear the canvas area
+		context.fillStyle = "#aaaaaa";
+		context.fillRect(0, 0, width, height);
+		context.fillStyle = "#000000";	
+	}
+	
+	function mouseMoved(evt) {
+		if (mouseDown) {
+			var x, y;
+			if (evt.type == "touchmove") {
+				x = evt.pageX;
+				y = evt.pageY;
+			} else {
+				x = evt.clientX;
+				y = evt.clientY;
+			}
+ 			var theta = x - old_x;
+			rotate_y(-theta);
+			old_x = x;
+			var theta = y - old_y;
+			rotate_x(theta);
+			old_y = y;
+ 		}
+	}
+	
+	function movementStart(evt) {
+		mouseDown = true; 
+		var x, y;
+		if (evt.type == "touchstart") {
+			x = evt.pageX;
+			y = evt.pageY;
+		} else {
+			x = evt.clientX;
+			y = evt.clientY;
+		}
+		old_x = x;
+		old_y = y;
+		
+	}
+	
+	function movementEnd(evt) {
+		mouseDown = false;
+	}
+	
+
+	function initCanvas() {
+		if (!canvasSupport) return;
+		
+		theCanvas = document.getElementById("myCanvas");
+		context = theCanvas.getContext("2d");
+		
+		theCanvas.addEventListener('mousedown', movementStart);
+		theCanvas.addEventListener('touchstart', movementStart);
+
+		theCanvas.addEventListener('mousemove', mouseMoved);
+		theCanvas.addEventListener('touchmove', mouseMoved);
+
+		theCanvas.addEventListener('mouseup', movementEnd);
+		theCanvas.addEventListener('touchend', movementEnd);
+		
+		width = theCanvas.width;
+		height = theCanvas.height;
+
+   		imgd = context.createImageData(1,1);
+    	var pix = imgd.data;
+    	pix[3] = 255; // alpha channel
+		
+	}
+	
+
+</script>
+</head>
+
+	<body>
+		<h1>Cube in HTML5</h1>
+
+		<canvas id="myCanvas" width="800" height="500">
+		Fallback content, in case the browser does not support Canvas.
+		</canvas>
+
+<p>This is a 3D rendering of a simple cube.</p>
+<p>
+	Rx: <button id="decreaseRxElement" onclick="changeRx(-0.2)">-</button><span id="rxElement">0</span><button id="increaseRx" onclick="changeRx(0.2)">+</button> <br/>
+	Ry: <button id="decreaseRyElement" onclick="changeRy(-0.2)">-</button><span id="ryElement">0</span><button id="increaseRy" onclick="changeRy(0.2)">+</button> <br/>
+	Rz: <button id="decreaseRzElement" onclick="changeRz(-0.2)">-</button><span id="rzElement">0</span><button id="increaseRz" onclick="changeRz(0.2)">+</button> <br/>
+</p>
+	
+<p>Not making use of the OpenGL features available in HTML5. Simply using basic mathematics/transformations and the <code>&lt;canvas&gt;</code> element.
+
+</body>
+</html>

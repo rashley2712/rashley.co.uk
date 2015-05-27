@@ -1,0 +1,134 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>3D plots</title>
+
+<script src="jquery191.js"></script>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<script type="text/javascript" src='SurfacePlot.js'></script>
+<script type="text/javascript" src='ColourGradient.js'></script>
+<script type="text/javascript">
+	// Set up everything when the page had finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	function eventWindowLoaded() {
+		console.log("Window loaded.... Let's start");
+	}
+	
+google.load("visualization", "1");
+google.setOnLoadCallback(setUp);
+
+function setUp() {
+    var numRows = 60.0;
+    var numCols = 60;
+    var xUpper = Math.PI;
+    var yUpper = Math.PI;
+    var xLower = -Math.PI;
+    var yLower = -Math.PI;
+    var xSpacing = ( xUpper - xLower ) / numRows;
+    var ySpacing = ( yUpper - yLower ) / numCols;
+    
+
+    var tooltipStrings = new Array();
+    var data = new google.visualization.DataTable();
+
+    for (var i = 0; i < numCols; i++) {
+        data.addColumn('number', 'col' + i);
+    }
+
+    data.addRows(numRows);
+    var d = 180 / numRows;
+    var idx = 0;
+
+    for (var i = 0; i < numRows; i++) {
+        for (var j = 0; j < numCols; j++) {
+
+            x = xLower + ( i * xSpacing )
+            y = yLower + ( j * ySpacing )
+            
+            value = Math.sin( x*x + y*y) / 4.0
+            value = Math.sin(x) * Math.cos(y) / 4.0
+            
+            data.setValue(i, j, value);
+
+            tooltipStrings[idx] = "x:" + i + ", y:" + j + " = " + value;
+            idx++;
+        }
+    }
+
+    surfacePlot = new greg.ross.visualisation.SurfacePlot(document.getElementById("surfacePlotDiv"));
+
+    // Don't fill polygons in IE. It's too slow.
+    var fillPly = true;
+
+    // Define a colour gradient.
+    var colour1 = {
+        red: 0,
+        green: 0,
+        blue: 255
+    };
+    var colour2 = {
+        red: 0,
+        green: 255,
+        blue: 255
+    };
+    var colour3 = {
+        red: 0,
+        green: 255,
+        blue: 0
+    };
+    var colour4 = {
+        red: 255,
+        green: 255,
+        blue: 0
+    };
+    var colour5 = {
+        red: 255,
+        green: 0,
+        blue: 0
+    };
+    var colours = [colour1, colour2, colour3, colour4, colour5];
+
+    // Axis labels.
+    var xAxisHeader = "X";
+    var yAxisHeader = "Y";
+    var zAxisHeader = "Z";
+
+    var options = {
+        xPos: 0,
+        yPos: 50,
+        width: 800,
+        height: 500,
+        colourGradient: colours,
+        fillPolygons: fillPly,
+        tooltips: tooltipStrings,
+        xTitle: xAxisHeader,
+        yTitle: yAxisHeader,
+        zTitle: zAxisHeader,
+        restrictXRotation: false
+    };
+
+    surfacePlot.draw(data, options);
+}
+
+</script>
+</head>
+
+<body>
+	<h1>Drawing 3D surfaces in HTML5</h1>
+<div id='surfacePlotDiv'>
+    <!-- SurfacePlot goes here... -->
+</div>
+
+</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-7409443-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+</html>

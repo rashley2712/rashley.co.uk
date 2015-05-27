@@ -1,0 +1,186 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Conway's Game of Life</title>
+
+<script type="text/javascript">
+
+// Set up everything when the page loads
+window.addEventListener("load", eventWindowLoaded, false);
+
+var rows = 40;
+var cols = 40;
+var grid = [];
+var tempGrid = [];
+var intervalID;
+var running = 0;
+var iterationCounter = 0;
+
+
+	
+	function drawTable(rows, cols) {
+		// Draws a table into the DOM
+		var tableHTML;
+		var DOMLocation = document.getElementById("grid");
+		
+		tableHTML = "<table>";
+		
+		for(var i=0; i<rows; i++) {
+			tableHTML+= "<tr>";
+			for (var j=0; j<cols; j++) {
+				tableHTML+= "<td bgcolor='";
+			    tableHTML+= (grid[i][j])? "#000000" :  "#ffffff";
+				tableHTML+="' style='width:10;height:10' onclick='tableClick(event)' id='" + i + "," + j +"'></td>";
+			}
+			tableHTML+= "</tr>";
+		}
+		
+		tableHTML+= "</table>";
+		
+		//console.log("Building a table");
+		//console.log(tableHTML);
+		DOMLocation.innerHTML = tableHTML;
+	}
+	
+	function tableClick(evt) {
+		console.log("Table clicked...");
+		var target=evt.target;
+		positionIdString = target.id;
+		Ids = positionIdString.split(",");
+		i = parseInt(Ids[0]);
+		j = parseInt(Ids[1]);
+		console.log(target.id + "   [" + i + "," + j + "]");
+		console.log(target);
+
+		grid[i][j] = (grid[i][j])? 0 : 1;
+		drawTable(rows, cols);
+	}
+		
+	function clearGrid() {
+		for (i=0; i<rows; i++) {
+			grid[i] = [];
+			for (j=0; j<cols; j++) grid[i][j] = 0;
+		}
+	}
+	
+	function countLiveNeighbours(i,j) {
+		var live = 0;
+		
+		live = grid[(i-1+rows)%rows][(j-1+cols)%cols];   	// x-1, y-1
+		live+= grid[(i-1+rows)%rows][j]; 					// x-1, y
+		live+= grid[(i-1+rows)%rows][(j+1)%cols]; 			// x-1, y+1
+		live+= grid[i][(j-1+cols)%cols];					// x, y-1
+		live+= grid[i][(j+1)%cols];							// x, y+1
+		live+= grid[(i+1)%rows][(j-1+cols)%cols];			// x+1, y-1
+		live+= grid[(i+1)%rows][j];							// x+1, y
+		live+= grid[(i+1)%rows][(j+1)%cols];				// x+1, y+1
+		
+		
+		return live;
+	}
+	
+	function iterate() {
+		// Compute the next step in the life 
+		tempGrid = [];
+		for (i=0; i< rows; i++) {
+			tempGrid[i] = [];
+			for (j=0; j<cols; j++) tempGrid[i][j] = grid[i][j];
+		}
+		var neighbours;
+		for (var i=0; i<rows; i++) {
+			
+			for (var j=0; j<cols; j++) {
+				neighbours = countLiveNeighbours(i,j);
+				console.log(i + "," + j + "(" + grid[i][j] +")  n: " + neighbours);
+				if (neighbours<2) tempGrid[i][j] = 0;
+				if (((neighbours==2) || (neighbours==3)) && grid[i][j]) tempGrid[i][j] = 1;
+				if ((neighbours>3) && (grid[i][j])) tempGrid[i][j] = 0; 
+				if (!grid[i][j] && neighbours == 3) tempGrid[i][j] = 1;
+			}
+		}
+		
+		for (i=0; i< rows; i++) {
+			for (j=0; j<cols; j++) grid[i][j] = tempGrid[i][j];
+		}
+		drawTable(rows, cols);
+		iterationCounter++;
+		document.getElementById("iterationSpan").innerText = iterationCounter;
+	}
+
+	function start() {
+		if (!running) {
+			intervalID = setInterval(iterate, 200);
+			running = 1;
+			document.getElementById("startButton").innerText = "Running...click to stop";
+		} else {
+			clearInterval(intervalID);
+			running = 0;
+			document.getElementById("startButton").innerText = "Start";
+		}
+	}
+	
+
+	function eventWindowLoaded() {
+		clearGrid();
+		drawTable(rows,cols);
+		iterationCounter = 0;
+		document.getElementById("iterationSpan").innerText = iterationCounter;
+	}
+	
+
+
+
+</script>
+</head>
+
+	<body>
+		<h1>Conway's Game of Life</h1>
+
+		<table>
+			<tr>
+				<td><div id="grid"></div></td>
+				<td><p>Try these shapes<br/>
+					<img width="25%" src="glider.png"><br/>Glider<br/>&nbsp;<br/>
+					<img width="25%"  src="spaceship.png"><br/>Spaceship<br/>&nbsp;<br/>
+					<img width="25%" src="r.png"><br/>R-pentomino<br/>&nbsp;<br/>
+					<img width="25%" src="acorn.png"><br/>Acorn<br/>&nbsp;<br/>
+					</p></td>
+			</tr>
+		</table>
+		<button id="resetButton" onclick="eventWindowLoaded()">Reset</button>
+		<button id="iterationButton" onclick="iterate()">> 1 tick</button>
+		<button id="startButton" onclick="start()">Start</button>
+		&nbsp;Iterations: <span id="iterationSpan">0</span>
+
+<p>
+<h1>Conway's Game of Life</h1>
+<p>Get more shape ideas here: Wiki: <a href="http://en.wikipedia.org/wiki/Conway's_Game_of_Life" target="_new">Conway's Game of Life</a></p>
+The universe of the Game of Life is an infinite two-dimensional orthogonal grid of square cells, each of
+which is in one of two possible states, alive or dead. Every cell interacts with its eight neighbours, which
+are the cells that are horizontally, vertically, or diagonally adjacent. At each step in time, the following
+transitions occur:
+<ol>
+<li>Any live cell with fewer than two live neighbours dies, as if caused by under-population.</li>
+<li>Any live cell with two or three live neighbours lives on to the next generation.</li>
+<li>Any live cell with more than three live neighbours dies, as if by overcrowding.</li>
+<li>Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.</li>
+</ol>
+The initial pattern constitutes the seed of the system. The first generation is created by applying the above
+rules simultaneously to every cell in the seed. Births and deaths occur simultaneously, and the discrete
+moment at which this happens is sometimes called a tick (in other words, each generation is a pure function
+of the preceding one). The rules continue to be applied repeatedly to create further generations.
+</p>
+
+
+</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41374131-1', 'devicecloud.co.uk');
+  ga('send', 'pageview');
+
+</script>
+</html>

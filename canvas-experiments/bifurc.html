@@ -1,0 +1,166 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Bifurcation curve</title>
+
+<script src="modernizr.js"></script>
+<script type="text/javascript">
+
+	// Some global variables
+	var theCanvas; 
+	var context;
+	var width; 
+	var height;
+	var imgd;
+	var intervalID;
+	
+	var p_start=0.3; // Population starting point
+	var p; // Population in year n
+	var a; // Growth rate
+	var start_a; // Strating growth rate for the graph
+	var end_a; // Final growth rate for the graph
+	var a_incr; // How much to increase'a' per pixel
+	var simulationsToRun;
+	var years;
+	
+	function next_year(p,a) {  // Calculate the population in the next year
+		return a*p*(1-p);
+	}
+		
+	// Set up everything when the page loads
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	
+	function startUp(){ 
+		intervalID = setInterval(nextSimulation, 1);
+	}
+	
+	function shutDown() {
+		clearInterval(intervalID);
+	}
+
+	function getParameters() {
+		//Read the parameters from the Web form
+		years = document.getElementById("years").value;
+		start_a = parseFloat(document.getElementById("start_a").value);
+		end_a = parseFloat(document.getElementById("end_a").value);
+		p_start = parseFloat(document.getElementById("p0").value);
+		console.log("Initial parameters: start_a: " + start_a + " end_a: " + end_a +"    p0: " + p_start + "    years: " + years);		
+	}
+
+	function eventWindowLoaded() {
+		initCanvas();
+		goButton = document.getElementById("go");
+		goButton.addEventListener('click', goPressed, false);
+		getParameters();
+	}
+		
+	function canvasSupport() {
+		return Modernizr.canvas;
+	}
+	
+	
+	function plot(a, pop) { // Scale the coordinates and plot on the canvas
+		x_scale = width/(end_a-start_a);
+		x = (a - start_a) * x_scale;
+		y_scale = height/(1);
+		y = height - pop * y_scale -1;
+		var xint = Math.round(x);
+		var yint = Math.round(y);
+		console.log("plotting (" + xint + "," + yint + ")");
+		context.putImageData(imgd, xint, yint);
+	}
+	
+	function runSimulation() {
+		p = p_start;
+		console.log("Starting a simulation: a=" + a + "  p=" + p);
+		for (i=0; i<years; i++) {
+			p = next_year(p,a);
+			if (i>50) plot(a, p);
+		}
+		console.log("Finished a simulation: " + p)
+		return p;
+	}
+	
+	function nextSimulation() {
+		var final_population = runSimulation();
+		document.all.population.innerText = final_population;				
+		document.all.growth_rate.innerText = a;				
+		document.all.simulations.innerText = simulationsToRun;				
+		a+= a_incr;
+		simulationsToRun--;
+		if (simulationsToRun<0) {
+			shutDown();
+		}
+	}
+	
+	function goPressed() {
+		clearCanvas();
+		getParameters();
+		simulationsToRun = width;
+		console.log("SimulationsToRun:" + simulationsToRun);
+		a_incr = (end_a - start_a)/simulationsToRun;
+		a = start_a;
+		console.log("Starting to run the simulation now");
+		startUp();
+	}
+		
+	function clearCanvas() {
+		// Clear the canvas area
+		context.fillStyle = "#aaaaaa";
+		context.fillRect(0, 0, width, height);
+		context.fillStyle = "#000000";	
+		console.log("Just cleared the canvas");	
+	}
+
+	function initCanvas() {
+		if (!canvasSupport) return;
+		
+		theCanvas = document.getElementById("myCanvas");
+		context = theCanvas.getContext("2d");
+		
+		width = theCanvas.width;
+		height = theCanvas.height;
+
+   		imgd = context.createImageData(1,1);
+    	var pix = imgd.data;
+    	pix[3] = 255; // alpha channel
+
+		clearCanvas();
+	}
+	
+
+</script>
+</head>
+
+	<body>
+		<h1>Bifurcation curve</h1>
+
+		<canvas id="myCanvas" width="600" height="400">
+		Fallback content, in case the browser does not support Canvas.
+		</canvas>
+<p>
+	Growth rate: <span id="growth_rate"></span><br/>
+	Final population: <span id="population"></span><br/>
+	Simulations to go: <span id="simulations"></span>
+</p>
+<form name="inputs">
+	Start a (growth rate):  <input type="text" id="start_a" value="0.0"/><br/>
+	End a (growth rate): <input type="text" id="end_a" value="4.0"/><br/>
+	p<sub>0</sub> (starting population): <input type="text" id="p0" value="0.3"/><br/>
+	years (number of years to run): <input type="text" id="years" value="100"/><br/>
+	<input type="button" id="go" value="Go"/><br/>
+</form>
+
+</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41374131-1', 'devicecloud.co.uk');
+  ga('send', 'pageview');
+
+</script>
+</html>

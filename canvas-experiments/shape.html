@@ -1,0 +1,457 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Shapes in 3D</title>
+
+<script src="modernizr.js"></script>
+<script src="jquery191.js"></script>
+<script src="vector.js"></script>
+<script type="text/javascript">
+	// Set up everything when the page had finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+
+	// Some global variables
+	var vertices = new Array();
+	var lines = new Array();
+	var theCanvas; 
+	var context;
+	var width; 
+	var height;
+	var imgd;
+	var scale;
+	var rxstep = 0.1;
+	var rzstep = 0.01;
+	var rystep = 0.3;
+	var observer = {x: 0, y: 0, z:30};
+	var light = {x: 10, y: 0, z: 300};
+	var dataLoaded = false;
+	var surfaces = new Array();
+	var indexedSurfaces = new Array();
+	var old_x, old_y;
+	var mouseDown = false;
+	var zPlane = 20;
+	var fillSurfaces = true; pointsOnly = false;
+	var started = false;
+	var zPlane = 0;
+	var observer = {x: 0, y: 0, z: 0};
+	var light = {x: 10, y: 0, z: 0};
+	
+	function eventWindowLoaded() {
+		initCanvas();
+		clearCanvas();
+		RxElement = document.getElementById("rxElement");
+		$("#rxElement").text(rxstep);
+		$("#ryElement").text(rystep);
+		$("#rzElement").text(rzstep);
+		
+		var query = getQueryParams(document.location.search);
+		console.log("Query: ", query);
+		if (query.model!=null) {
+			loadShape(query.model + ".dat");
+			$('#object').val(query.model);
+		} else loadShape("head.dat");
+	}
+	
+	function getQueryParams(qs) {
+		qs = qs.split("+").join(" ");
+
+    		var params = {}, tokens,
+        	re = /[?&]?([^=]+)=([^&]*)/g;
+
+    		while (tokens = re.exec(qs)) {
+        		params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
+    		}
+   		return params;
+	}
+	
+	function objectLoaded(data) {
+		//console.log(data);
+		var verticesLinesSplit = data.split(":::");
+		var pointsStrings = verticesLinesSplit[0].split("\n");
+		for (var i in pointsStrings) {
+			var coordsString = pointsStrings[i].split(" ");
+			var x = parseFloat(coordsString[0]);
+			var y = parseFloat(coordsString[1]);
+			var z = parseFloat(coordsString[2]);
+			//console.log("(" + x + ", " + y + ", " + z +")");
+			if (!isNaN(x) && !isNaN(y) && !isNaN(z)) defineVertex(x, y, z);
+		}
+		
+		console.log("Loaded " + vertices.length + " vertices.");
+
+		// Now get the surfaces...
+		surfaceDefinitions = verticesLinesSplit[1].split("\n");
+		
+
+		console.log(surfaceDefinitions.length + " surfaces in the file.")
+		
+		for (var i in surfaceDefinitions) {
+			surfaceString = surfaceDefinitions[i].split(" ");
+		
+			if (!isNaN(num_vertices = parseInt(surfaceString[0]))) {
+				var s = new Array();
+				for (i = 0; i<num_vertices; i++) {
+					v_index = parseInt(surfaceString[i+1]);
+					if(!isNaN(v_index)) {
+						s.push(v_index);
+					} else {
+						console.log('bad index', surfaceString[i+1]);
+					}
+				} 
+				defineSurface(s, num_vertices);	
+				//console.log(s);
+			}		
+		}
+		
+		console.log("Loaded " + surfaces.length + " surfaces.");
+		
+		dataLoaded = true;
+		determineExtents();
+		rotate_x(0, vertices);
+		rotate_y(-90, vertices);
+		drawShapeBySurfaces();
+		startUp();
+	}
+	
+	function loadShape(filename) {
+		filename = "models/" + filename;
+		$.get(filename, objectLoaded);
+	}
+	
+	function loadNewObject() {
+		var value = document.getElementById("object").value;
+		filename = (value + ".dat");
+		// Clear the old shape
+		vertices.length = 0;
+		surfaces.length = 0;
+		loadShape(filename);
+	}
+	
+	function intersectZPlane(point) {
+		var t;
+		var intersection;
+		t = (zPlane - observer.z) / (observer.z - point.z);
+		intersection = { x: (observer.x + t*(observer.x-point.x)), y: (observer.y + t*(observer.y-point.y))};
+		return intersection;
+	}
+	
+	function defineVertex(x,y,z) {
+		var vertex;
+		vertex = {x: x, y: y, z: z};
+		vertices.push(vertex);
+		return vertices.length;
+	}
+	
+	function defineLine(from, to) {
+		var line;
+		line = {from: from, to: to};
+		lines.push(line);
+		return lines.length;
+	}
+	
+	function defineSurface(v, numVertices) {
+		var surface;
+		surface = {v: v, n: numVertices};
+		surfaces.push(surface);
+		//console.log(surface);
+		return surfaces.length;
+	}
+	
+
+	
+	function surfaceCentroid(surface) {
+		// Returns the coordinates of the centroid of the surface
+		var cx = 0, cy = 0, cz = 0;
+		for (var i=0; i<surface.n; i++) {
+			v_index = surface.v[i];
+			if (vertices[v_index] == undefined) console.log('undefined vertex:', v_index);
+			cx+= vertices[v_index].x; 
+			cy+= vertices[v_index].y; 
+			cz+= vertices[v_index].z; 
+			
+		} 
+		cx = cx / surface.n;
+		cy = cy / surface.n;
+		cz = cz / surface.n;
+	
+		return {x: cx, y: cy, z: cz}
+	}
+	
+
+	
+	function sortSurfaces() {
+		indexedSurfaces.length = 0;
+		for (var i in surfaces) {
+			surfaceIndex = {depth: observerDistance(surfaces[i]), index: parseInt(i)};
+			indexedSurfaces.push(surfaceIndex);
+		}
+		indexedSurfaces.sort(function(a,b) { return b.depth - a.depth; });
+	}
+	
+	function drawVertices() {
+		for (var i in vertices) {
+			var p = intersectZPlane(vertices[i]);
+			context.putImageData(imgd, xToCanvas(p.x), yToCanvas(p.y));
+		}
+	}
+	
+
+	function drawShapeBySurfaces() {
+		sortSurfaces();
+		context.strokeStyle = '#aaaaaa';
+		context.fillStyle="#666666";
+		context.fillStyle = '#aaaaaa';
+		context.lineWidth=1;
+		for (var i in indexedSurfaces) {
+			j = indexedSurfaces[i].index;
+			currentSurface = surfaces[j]
+			num_v = currentSurface.n;  // This is the number of vertices in this particular surface
+			p = intersectZPlane(vertices[currentSurface.v[0]]);
+			context.beginPath();
+			context.moveTo(xToCanvas(p.x), yToCanvas(p.y));
+			for(var k=1; k<num_v; k++) {
+				p = intersectZPlane(vertices[currentSurface.v[k]]);
+				context.lineTo(xToCanvas(p.x), yToCanvas(p.y));
+			}
+			context.closePath();
+			colour = Math.floor(128+128*incidentLight(surfaces[j], light));
+			colourStr = 'rgb(' + colour + ', ' + colour + ', ' + colour + ')';
+			if (num_v == 3) colourStr = 'rgb( 0, 0, ' + colour + ')';
+			if (num_v == 4) colourStr = 'rgb( 0, ' + colour + ', 0)';
+			 
+			context.strokeStyle = colourStr;
+			context.fillStyle = colourStr;
+			
+			
+			if (fillSurfaces) context.fill(); else context.stroke();
+		}
+	}
+
+	
+	function determineExtents() {
+		// Finds the zoom factor and scaling transformations for the co-ordinate system.
+		centerOrigin(vertices);
+		var max = getMaxVertex(vertices);
+		console.log("Max extent: " + max);
+		scale = height/(max * 0.5); 
+		
+		// Put the z-screen 100% further away. 
+		zPlane = max * 1.5;
+		
+		// Put the observer 30% further away
+		observer = {x: 0, y: 0, z: zPlane *1.5};
+		console.log("Observer", observer);
+		console.log("z-plane: ", zPlane);
+		// Put the light 5 times further away
+		light = {x: max*0.5, y: 0, z: max*5};
+		
+	}
+	
+	function toggleFillSurfaces() {
+		fillSurfaces = !fillSurfaces;
+		//drawShapeBySurfaces();
+	}
+
+	function togglePointsOnly() {
+		pointsOnly = !pointsOnly;
+		//drawShapeBySurfaces();
+	}
+
+		
+	function startUp() {
+		if (!started) {
+			intervalID = setInterval(animate, 20);
+			started = true;
+		}
+	}
+	
+	function animate() {
+		if (dataLoaded){ 
+			clearCanvas();
+			rotate_z(rzstep, vertices);
+			rotate_x(rxstep, vertices);
+			rotate_y(rystep, vertices);
+			if (!pointsOnly) drawShapeBySurfaces();
+			   else drawVertices();
+		}
+	}
+	
+	function changeRx(delta) {
+		rxstep+= delta;
+		rxstep = Math.round(rxstep*10) / 10;
+		$("#rxElement").text(rxstep);
+	}
+
+	function changeRz(delta) {
+		rzstep+= delta;
+		rzstep = Math.round(rzstep*10) / 10;
+		$("#rzElement").text(rzstep);
+	}
+
+	function changeRy(delta) {
+		rystep+= delta;
+		rystep = Math.round(rystep*10) / 10;
+		$("#ryElement").text(rystep);
+		
+	}
+
+	
+	function yToCanvas(y) {
+		ypos = height/2.0 - y * scale;
+		return ypos;
+	}
+
+	function xToCanvas(x) {
+		xpos = width/2.0 + x * scale;
+		return xpos;
+	}
+		
+	function canvasSupport() {
+		return Modernizr.canvas;
+	}
+	
+	function mouseMoved(evt) {
+		if (mouseDown) {
+			var x, y;
+			if (evt.type == "touchmove") {
+				x = evt.pageX;
+				y = evt.pageY;
+			} else {
+				x = evt.clientX;
+				y = evt.clientY;
+			}
+ 			var theta = x - old_x;
+			rotate_y(-theta, vertices);
+			old_x = x;
+			var theta = y - old_y;
+			rotate_x(theta, vertices);
+			old_y = y;
+ 		}
+	}
+	
+	
+	function clearCanvas() {
+		// Clear the canvas area
+		context.fillStyle = "#79bad6";
+		context.fillRect(0, 0, width, height);
+		context.fillStyle = "#000000";	
+	}
+	
+	function movementStart(evt) {
+		mouseDown = true; 
+		var x, y;
+		if (evt.type == "touchstart") {
+			x = evt.pageX;
+			y = evt.pageY;
+		} else {
+			x = evt.clientX;
+			y = evt.clientY;
+		}
+		old_x = x;
+		old_y = y;
+		
+	}
+	
+	function movementEnd(evt) {
+		mouseDown = false;
+	}
+
+	function initCanvas() {
+		if (!canvasSupport) return;
+		
+		theCanvas = document.getElementById("myCanvas");
+		context = theCanvas.getContext("2d");
+		theCanvas.addEventListener('mousedown', movementStart);
+		theCanvas.addEventListener('touchstart', movementStart);
+
+		theCanvas.addEventListener('mousemove', mouseMoved);
+		theCanvas.addEventListener('touchmove', mouseMoved);
+
+		theCanvas.addEventListener('mouseup', movementEnd);
+		theCanvas.addEventListener('touchend', movementEnd);
+		
+		
+		width = theCanvas.width;
+		height = theCanvas.height;
+		
+		clearCanvas();
+		context.font = "20px _sans";
+		context.textBaseline = "top";
+		context.fillText("Loading object...", width/2, height/2);
+		
+
+   		imgd = context.createImageData(1,1);
+    	pix = imgd.data;
+    	pix[3] = 255; // alpha channel
+		console.log("Defined canvas");
+	}
+	
+	
+
+</script>
+</head>
+
+	<body>
+		<h1>Shapes in HTML5</h1>
+		<b>Options</b><br/>
+		Choose object:
+	    <select id = "object" onChange ="loadNewObject()">
+	               <option value = "teapot">teapot</option>
+	               <option value = "sphere">sphere</option>
+	               <option value = "rhombicosidodecahedron">rhombicosidodecahedron</option>
+	               <option value = "icosidodecahedron">icosidodecahedron</option>
+	
+	               <option value = "x29_plane">plane</option>
+	               <option value = "space_shuttle">spaceship</option>
+	               <option value = "apple">apple</option>
+	               <option value = "volks">volks</option>
+	               <option value = "seashell">seashell</option>
+	               <option value = "butterfly">butterfly</option>
+	               <option value = "fish">fish</option>
+	               <option value = "m416">m416</option>
+	               <option value = "m1313">m1313</option>
+	               <option value = "sword">sword</option>
+	               <option value = "goblet">goblet</option>
+	               <option value = "asu">asu</option>
+	               <option value = "dragon">dragon</option>
+	               <option value = "space_station">space_station</option>
+	               <option value = "head" selected>head</option>
+	               <option value = "heart">heart</option>
+	               <option value = "king">king</option>
+	               <option value = "klingon">klingon</option>
+	               <option value = "mushroom">mushroom</option>
+	               <option value = "pear">pear</option>
+	               <option value = "r2">r2</option>
+	               <option value = "eta_carinae">eta_carinae</option>
+	
+	             </select>
+		<input type="checkbox" onclick="toggleFillSurfaces()" checked>Fill surfaces
+		<input type="checkbox" onclick="togglePointsOnly()">Vertices only
+		<br/>
+		<canvas id="myCanvas" width="800" height="500">
+		Fallback content, in case the browser does not support Canvas.
+		</canvas>
+
+<p>This is a 3D rendering of a simple shape.</p>
+<p>
+	Rx: <button id="decreaseRxElement" onclick="changeRx(-0.1)">-</button><span id="rxElement">0</span><button id="increaseRx" onclick="changeRx(0.1)">+</button> <br/>
+	Ry: <button id="decreaseRyElement" onclick="changeRy(-0.1)">-</button><span id="ryElement">0</span><button id="increaseRy" onclick="changeRy(0.1)">+</button> <br/>
+	Rz: <button id="decreaseRzElement" onclick="changeRz(-0.1)">-</button><span id="rzElement">0</span><button id="increaseRz" onclick="changeRz(0.1)">+</button> <br/>
+</p>
+	
+<p>This page does not make use of the OpenGL features available in HTML5. It simply uses basic mathematics/transformations and the <code>&lt;canvas&gt;</code> element.
+
+<p>The definitions of the objects have been taken from <a href="http://www.holmes3d.net/graphics/offfiles/">Holmes3D.net</a>, with the exception of the model of the <a href="http://en.wikipedia.org/wiki/Eta_Carinae">Eta Carinae</a> nebula which was taken from <a href="http://arxiv.org/abs/1407.4096">this paper</a> to be published in the Monthly Notices of the Royal Astronomical Society. 
+</p>
+</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-7409443-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+</html>

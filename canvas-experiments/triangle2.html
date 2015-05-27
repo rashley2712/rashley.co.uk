@@ -1,0 +1,201 @@
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Sierpinski Triangle (slow)</title>
+
+<script src="modernizr.js"></script>
+<script type="text/javascript">
+
+	// Some global variables
+	var theCanvas; 
+	var context;
+	var width; 
+	var height;
+	var dropDownElement;
+	var imgd;
+	var drawing = 0;
+	var intervalID;
+	var iterations_to_go = 0;
+	
+	// Define the bounding triangle
+	var vertex_x = new Array(3);
+	var vertex_y = new Array(3);
+	var num_vertices = 3;
+
+	vertex_x[0] = 0;vertex_y[0] = 0;
+	vertex_x[1] = 400;vertex_y[1] = 0;
+	vertex_x[2] = 200;vertex_y[2] = 400;
+	
+	// Set up everything when the page loads
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	// Get a reference to the dropdown box, associate it with a callback
+	function dropDownChanged(e) {
+		var target = e.target;
+		iterations = target.value;
+		console.log("Text box changed to: " + iterations);
+	}
+	
+	function goPressed() {
+		console.log("Starting to draw now");
+		if (!drawing) {
+			drawing = 1;
+			initDrawing(); 
+		} else {
+			console.log("Already drawing, please wait.");
+		}
+	}
+	
+	function initDrawing() {
+		iterations_to_go = iterations;
+		clearCanvas();
+		start_cursor();
+		startUp();
+	}
+	
+	function start_cursor() {
+		// Choose a random starting point (inside the shape) for the cursor
+    	inside = 0;
+		while (inside==0) {
+			x = Math.floor(Math.random()*100) + 200;
+			y = Math.floor(Math.random()*100) + 200;
+    		// Is it inside the shape? - will do this later.... cheat for now ... seems that it doesn't matter. 
+			inside = 1;
+		} 
+		cursor_x = x;
+		cursor_y = y;
+	}
+	
+	function next_cursor(){
+		// Advance the cursor 
+		// Step 1 - Choose a random vertex
+		index = Math.floor(Math.random()*num_vertices);
+		// Get its coordinates
+		v_x = vertex_x[index];
+		v_y = vertex_y[index];
+		// Step 2 - find the midpoint between the cursor and the vertex
+		x = (v_x - cursor_x) / 2 + cursor_x;
+		y = (v_y - cursor_y) / 2 + cursor_y;
+		// Step 3 - Make this the new cursor
+		cursor_x = x;
+		cursor_y = y;
+	}
+	
+	function nextIteration() {
+		context.putImageData(imgd, cursor_x, cursor_y);
+		document.all.number.innerText = iterations - iterations_to_go + 1;	
+		next_cursor();
+		iterations_to_go--;
+		
+		if (iterations_to_go==0) {
+			clearInterval(intervalID);
+			drawing = 0;
+		}	
+	}
+	
+	
+	function startUp(){ 
+		intervalID = setInterval(nextIteration, 1);
+	}
+
+	function eventWindowLoaded() {
+		initCanvas();
+		dropDownElement = document.getElementById("iterations");
+		dropDownElement.addEventListener('change', dropDownChanged, false);	
+		goButton = document.getElementById("go");
+		goButton.addEventListener('click', goPressed, false);
+		iterations = document.getElementById("iterations").value;
+			
+	}
+		
+	function canvasSupport() {
+		return Modernizr.canvas;
+	}
+	
+	function wait(millis) {
+		var date = new Date();
+		var curDate = null;
+		console.log("going to wait for " + millis + " ms.")
+		do { curDate = new Date(); } 
+			while(curDate-date < millis);
+	}
+	
+	
+	function drawBoundingTriangle() {
+		context.beginPath();
+		context.moveTo(vertex_x[num_vertices-1], vertex_y[num_vertices-1]); 
+		for(var i=0; i<num_vertices; i++) context.lineTo( vertex_x[i], vertex_y[i]);
+		context.stroke();
+		context.closePath();
+	}
+	
+	function clearCanvas() {
+		// Clear the canvas area
+		context.fillStyle = "#aaaaaa";
+		context.fillRect(0, 0, width, height);
+		context.fillStyle = "#000000";	
+		console.log("Just cleared the canvas");	
+	}
+
+	function initCanvas() {
+		if (!canvasSupport) return;
+		
+		theCanvas = document.getElementById("myCanvas");
+		context = theCanvas.getContext("2d");
+		
+		width = theCanvas.width;
+		height = theCanvas.height;
+
+   		imgd = context.createImageData(1,1);
+    	var pix = imgd.data;
+    	pix[3] = 255; // alpha channel
+	}
+	
+
+</script>
+</head>
+
+	<body>
+		<h1>Sierpinski Triangle (pixel-by-pixel)</h1>
+
+		<canvas id="myCanvas" width="410" height="410">
+		Fallback content, in case the browser does not support Canvas.
+		</canvas>
+
+<p>
+	<form>
+		<select id="iterations">
+			<option value="10" selected>10</option>
+			<option value="100">100</option>			
+			<option value="1000">1000</option>	
+			<option value="10000">10000</option>	
+			<option value="100000">100000</option>	
+		</select>
+		<input type="button" id="go" value="Go">
+	</form>
+</p>
+Pixels plotted: <span id="number"></span><br/>
+		<p>To make this image, follow this very simple algorithm...
+
+		<ol>
+			<li>Take three vertexes of a triangle.</li>
+			<li>Now take any random point inside the triangle. Use it as a starting point.</li>
+			<li>Plot this point.</li>
+			<li>Now choose any of the 3 vertexes at random and find the midpoint between your current position and this vertex.</li> 
+			<li>Go to step 3. Repeat.</li>
+		</ol>
+		</p>
+		<p>What happens when you follow the same algorithm but with a <a href="square.html">square</a> instead of a triangle?
+		</p>
+</body>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41374131-1', 'devicecloud.co.uk');
+  ga('send', 'pageview');
+
+</script>
+</html>
