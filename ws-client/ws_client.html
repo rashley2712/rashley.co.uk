@@ -14,15 +14,16 @@
 	var pingHeartBeatId = 0;
 	var _heartBeatTime = 20000;
 	var _pingRefreshTime = 20000;
-	var connectedStatusMessages = ["not connected", "waiting", "game requested", "accepting", "playing"];
+	var connectedStatusMessages = ["not connected", "connected", "ready", "playing"];
 	var keyUp, keyDown, keyLeft, keyRight = false;
 	var canvas, context, width, height, imgp;
+	var gameActive = false;
+	var playerReady = false;
 	// connected status
 	// 0: not connected
-	// 1: connected and viewing user list
-	// 2: waiting for a game request to be accepted
-	// 3: pending accept of a game request
-	// 4: playing a game
+	// 1: connected and waiting 
+	// 2: ready to play
+	// 3: playing a game
 	
 	window.addEventListener("load", eventWindowLoaded, false);
 	function eventWindowLoaded() {
@@ -36,6 +37,12 @@
 		imgp = context.createImageData(1,1);
 		var pixel = imgp.data;
 		pixel[3] = 255; // alpha channel
+		imgd = context.createImageData(2,2);
+		var pix = imgd.data;
+		pix[3] = 255; // alpha channel
+		pix[7] = 255; // alpha channel
+		pix[11] = 255; // alpha channel
+		pix[15] = 255; // alpha channel
   		
 		document.onkeydown = function(e) {
 					e = e?e:window.event;
@@ -72,6 +79,22 @@
 							break;
 						case 83: // 's' key
 							Socket.send("startgame|" + username);
+							break;
+						case 82: // 'r' key
+							if (!gameActive) {
+								if (!playerReady) {
+									Socket.send("ready|" + username);
+									changeConnectedStatus(2);
+									playerReady = true;
+								} else {
+									Socket.send("notready|" + username);
+									changeConnectedStatus(1);	
+									playerReady = false;							
+								}
+							}
+							break;
+						case 80: // 'p' key
+							measurePing();
 							break;
 					}
 				}
@@ -157,9 +180,8 @@
 				console.log(message);
 				var response = message.data;
 				var responseObject = JSON.parse(response);
-				console.log(response);
 				console.log(responseObject);
-				console.log("msg :" + responseObject.msg);
+				console.log("msg: " + responseObject.msg);
 				var status = String("[" + responseObject.msg +"] " + responseObject.data);
 				debug(status);
 				
@@ -167,9 +189,6 @@
 				if (responseObject.msg=="connected") {
 					debug("Connection acknowledged.");
 					changeConnectedStatus(1);
-					requestUserList();
-					pingHeartBeatId = setInterval(pingHeartBeat, _pingRefreshTime);	
-					userHeartBeat = setInterval(refreshUsersHeartBeat, _heartBeatTime);			
 				}
 				
 				if (responseObject.msg=="users") {
@@ -185,8 +204,17 @@
 					drawUsersTable();
 				}
 				
+				if (responseObject.msg=="start") {
+					gameActive = true;
+					changeConnectedStatus(3);
+					positionRequestPending = true;
+					Socket.send("positions|" + username);
+					
+				}
+				
 				if(responseObject.msg=="positions") {
 					data = responseObject.data;
+					positionRequestPending = false;
 					updatePositions(data);
 				}
 				
@@ -196,6 +224,7 @@
 					pingTime = d2 - d1;
 					debug("measured ping time: " + pingTime);
 					setPing(pingTime);
+					
 				}
 				
 				if(responseObject.msg=="gamerequest") {
@@ -230,6 +259,7 @@
 	function setPing(pingTime){
 		// Tell the server what my round trip ping time is (this is called after receiving a ping echo [or 'pong'])
 		Socket.send("setping|" + pingTime);
+		$("#pingtime").text(pingTime + " ms");
 	}
 	
 	function sendKey(direction, status) {
@@ -258,10 +288,16 @@
 	
 	function updatePositions(data) {
 		console.log("Updating positions: ");
+		context.fillStyle = "#cccccc";
+		context.fillRect(0, 0, width, height);
 		for (i in data) {
 			playerX = data[i].x;
 			playerY = data[i].y;
-			context.putImageData(imgp, playerX, playerY);
+			context.putImageData(imgd, playerX, playerY);
+		}
+		if (gameActive) {
+			// Request the positions yet again 
+			Socket.send("positions|" + username);
 		}
 	}
 	
@@ -285,48 +321,13 @@
 		$('#user_' + requestedUser).toggleClass("highlighted", true);
 	}
 	
-	function setRequestedUser(usernameInput) {
-		console.log("choosing the user: " + usernameInput);
-		if(usernameInput == requestedUser) {
-			// Toggle user request off
-			requestedUser = "";
-			$('#user_' + usernameInput).toggleClass("highlighted", false);
-			$('#requestedPlayer').html("<i>...select one...</i>");
-			return;
-		}
-		if(usernameInput == username) {
-			$('#requestedPlayer').html("<i>... not yourself! ... </i>");
-			return;
-		}
-		
-		// Unselect the previous selected user
-		$('#user_' + requestedUser).toggleClass("highlighted", false);
-		
-		// Display the name of the new selected user
-		$('#requestedPlayer').html(usernameInput);
-		
-		// Highlight the selected player in the table...
-		$('#user_' + usernameInput).toggleClass("highlighted", true);
-		requestedUser = usernameInput;
-	}
-	
-	function requestGame() {
-		if(!connected || requestedUser=="" || requestedUser=="") return;
-		Socket.send("requestgame|" + requestedUser); 
-		changeConnectedStatus(2);
-	}
-	
 	function changeConnectedStatus(newval) {
 		connected = newval;
 		debug("changing connected status to: [" + connected + "] " + connectedStatusMessages[connected]);
 		Socket.send("updatestatus|"+ connected);
 		$("#connectedStatusField").text(connectedStatusMessages[connected]);
-	}
-	
-
-	function acceptGame() {
-		if (connected!=3) return;
-		Socket.send()
+		$("#gamestatus").text(connectedStatusMessages[connected]);
+		
 	}
 	
 </script>
@@ -369,6 +370,16 @@
 						<td class='unpressed'  id="keyLEFT">left</td>
 						<td class='unpressed'  id="keyDOWN">down</td>
 						<td class='unpressed'  id="keyRIGHT">right</td>
+					</tr>
+				</table>
+				<table border='1'>
+					<tr>
+						<td class='unpressed' id='gamestatus'>disconnected</td>
+					</tr>
+				</table>
+				<table border='1'>
+					<tr>
+						<td id='pingtime'>---</td>
 					</tr>
 				</table>
 			</td>
