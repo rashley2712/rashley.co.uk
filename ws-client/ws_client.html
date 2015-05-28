@@ -293,7 +293,11 @@
 		for (i in data) {
 			playerX = data[i].x;
 			playerY = data[i].y;
+			playerTrail = data[i].trail;
 			context.putImageData(imgd, playerX, playerY);
+			// Draw player[i] trail
+			for (var j=0; j<playerTrail.length; j++) context.putImageData(imgp, playerTrail[j].x, playerTrail[j].y);
+			
 		}
 		if (gameActive) {
 			// Request the positions yet again 
