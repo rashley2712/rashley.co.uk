@@ -25,6 +25,32 @@
     text-align: left;
 }
 
+/* Connected but not ready */
+.status_1 {  
+	background-color: #F78181;
+	border: 1px solid #777;
+    font-size: 11px;
+    padding: 4px 0;
+    text-align: left;
+}
+/* Connected and ready  */
+.status_2 {
+	background-color: #F5DA81;
+	border: 1px solid #777;
+    font-size: 11px;
+    padding: 4px 0;
+    text-align: left;
+}
+/* Playing */
+.status_3 {
+	background-color: #A9F5BC;
+	border: 1px solid #777;
+    font-size: 11px;
+    padding: 4px 0;
+    text-align: left;
+}
+
+
 .connected {
 	background-color: #99EE99;
 }

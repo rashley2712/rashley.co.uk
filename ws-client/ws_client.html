@@ -18,6 +18,7 @@
 	var canvas, context, width, height, imgp;
 	var gameActive = false;
 	var playerReady = false;
+	var playerStatus = 0;
 	var connectedStatusMessages = ["not connected", "connected", "ready", "playing"];
 	// connected status
 	// 0: not connected
@@ -83,16 +84,16 @@
 							}
 							break;
 						case 82: // 'r' key
-							if (!gameActive) {
-								if (!playerReady) {
-									Socket.send("ready|" + username);
-									changeConnectedStatus(2);
-									playerReady = true;
-								} else {
-									Socket.send("notready|" + username);
-									changeConnectedStatus(1);	
-									playerReady = false;							
-								}
+							if (playerStatus == 1) {
+								playerStatus = 2;
+								Socket.send("updatestatus|" + username + "|" + playerStatus);
+								changeConnectedStatus(playerStatus);	
+								playerReady = true;
+							} else if (playerStatus == 2) {
+								playerStatus = 1;
+								Socket.send("updatestatus|" + username + "|" + playerStatus);
+								changeConnectedStatus(playerStatus);	
+								playerReady = false;							
 							}
 							break;
 						case 80: // 'p' key
@@ -149,18 +150,16 @@
 	}
 	
 	function connect() {
-		if(!connected) {
+		if(playerStatus == 0) {
 			serverURL = document.getElementById("server").value;
 			debug("connecting to server...[" + serverURL + "]");
 			Socket = new WebSocket("ws://" + serverURL);
 
 			Socket.onopen = function () {
-				//console.log("A connection has been opened...");
-				//console.log(Socket);
-				//console.log("Socket readyState : " + Socket.readyState);
 				$('#connectButton').text("Disconnect");
 				$('#usernameField').toggleClass("connected", true);
 				Socket.send("connect|" + username);
+				changeConnectedStatus(1);
 			}
 
 			Socket.onclose = function() {
@@ -173,6 +172,7 @@
 				users = [];
 				drawUsersTable();
 				gameActive = false;
+				changeConnectedStatus(0);
 				$('#connectButton').text("Connect");
 				$('#usernameField').toggleClass("connected", false);
  			}
@@ -196,11 +196,12 @@
 				if (responseObject.msg=="users") {
 					users = [];
 					for (i in responseObject.data) {
-						var userObject = {username: null, status: 0, ping: null};
-						userObject.ping = responseObject.data[i].ping;
+						var userObject = {username: null, status: 0, score: null};
+						userObject.score = responseObject.data[i].score;
 						userObject.username = responseObject.data[i].username;
 						userObject.status = responseObject.data[i].status;
 						users.push(userObject);
+						debug(JSON.stringify(userObject));
 					}
 					console.log(users);
 					drawUsersTable();
@@ -211,7 +212,12 @@
 					changeConnectedStatus(3);
 					positionRequestPending = true;
 					Socket.send("positions|" + username);
-					
+				}
+				
+				if (responseObject.msg=="stop") {
+					gameActive = false;
+					debug(JSON.stringify(responseObject.data));
+					changeConnectedStatus(2);  // Change back to ready.
 				}
 				
 				if(responseObject.msg=="positions") {
@@ -229,13 +235,6 @@
 					
 				}
 				
-				if(responseObject.msg=="gamerequest") {
-					var requestFromUser = responseObject.data;
-					debug("gamerequest: " + status);
-					$('#requestedPlayer').text(requestFromUser + " has requested a game");
-					$('#requestGameButton').text("Accept");
-					changeConnectedStatus(3);
-				}
 			}
 
 			Socket.onerror = function() {
@@ -310,11 +309,11 @@
 		// Draws the list of connected users
 		var tableHTML = "";
 		
-		tableHTML+="<table class='userlist' width='100%'>";
-		
+		tableHTML+="<table class='userlist' width='100%' border='1'>";
+		tableHTML+="<tr><th>Name</th><th>Status</th><th>Score</th></tr>";
 		for (i in users) {
-			tableHTML+='<tr class="status_connected" onclick="setRequestedUser(\'' + users[i].username + '\')" id="user_' + users[i].username + '">';
-			tableHTML+="<td>" + users[i].username + " </td><td>" + connectedStatusMessages[users[i].status] + "</td><td>" + users[i].ping + " ms</td>"
+			tableHTML+='<tr class="status_' + users[i].status +'">';
+			tableHTML+="<td>" + users[i].username + "</td><td>" + connectedStatusMessages[users[i].status] + "</td><td>" + users[i].score + "</td>"
 			tableHTML+="</tr>";
 		}
 		
@@ -322,16 +321,15 @@
 		tableHTML+="</table>";
 		
 		console.log(tableHTML);
-		$("#netStatusCell").html(tableHTML);
+		$("#userlist").html(tableHTML);
 		$('#user_' + requestedUser).toggleClass("highlighted", true);
 	}
 	
 	function changeConnectedStatus(newval) {
-		connected = newval;
-		debug("changing connected status to: [" + connected + "] " + connectedStatusMessages[connected]);
-		Socket.send("updatestatus|"+ connected);
-		$("#connectedStatusField").text(connectedStatusMessages[connected]);
-		$("#gamestatus").text(connectedStatusMessages[connected]);
+		if (newval!=undefined) playerStatus = newval;
+		debug("changing connected status to: [" + playerStatus + "] " + connectedStatusMessages[playerStatus]);
+		$("#connectedStatusField").text(connectedStatusMessages[playerStatus]);
+		$("#gamestatus").text(connectedStatusMessages[playerStatus]);
 		
 	}
 	
@@ -361,10 +359,7 @@
 				username: <input type="text" id="usernameField" value="rashley" onchange="updateUsername()"/>
 				<button id="connectButton" onclick="connect()">Connect</button>
 				<br/>
-				player: <span id='requestedPlayer'><i>...select one...</i></span>
-				<button id="requestGameButton" onclick="requestGame()">Request a game</button>
-				<span id="netStatusCell"><em>...not connected...</em>
-				</span>
+				<span id="userlist"></span>
 				<table id="keypress" border="1">
 					<tr>
 						<td>&nbsp;</td>
