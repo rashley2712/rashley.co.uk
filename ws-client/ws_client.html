@@ -14,11 +14,11 @@
 	var pingHeartBeatId = 0;
 	var _heartBeatTime = 20000;
 	var _pingRefreshTime = 20000;
-	var connectedStatusMessages = ["not connected", "connected", "ready", "playing"];
 	var keyUp, keyDown, keyLeft, keyRight = false;
 	var canvas, context, width, height, imgp;
 	var gameActive = false;
 	var playerReady = false;
+	var connectedStatusMessages = ["not connected", "connected", "ready", "playing"];
 	// connected status
 	// 0: not connected
 	// 1: connected and waiting 
@@ -78,7 +78,9 @@
 							}
 							break;
 						case 83: // 's' key
-							Socket.send("startgame|" + username);
+							if (gameActive) {
+								Socket.send("suicide|" + username);
+							}
 							break;
 						case 82: // 'r' key
 							if (!gameActive) {
@@ -100,8 +102,7 @@
 				}
 				document.onkeyup = function(e) {
 					e = e?e:window.event;
-					console.log(e.keyCode + " released");
-			
+					
 					switch(e.keyCode) {
 						case 38: //up arrow
 							if (keyUp) {
@@ -171,6 +172,7 @@
 				pingHeartBeatId = 0;
 				users = [];
 				drawUsersTable();
+				gameActive = false;
 				$('#connectButton').text("Connect");
 				$('#usernameField').toggleClass("connected", false);
  			}
@@ -287,7 +289,6 @@
 	}
 	
 	function updatePositions(data) {
-		console.log("Updating positions: ");
 		context.fillStyle = "#cccccc";
 		context.fillRect(0, 0, width, height);
 		for (i in data) {
@@ -297,7 +298,7 @@
 			context.putImageData(imgd, playerX, playerY);
 			// Draw player[i] trail
 			for (var j=0; j<playerTrail.length; j++) context.putImageData(imgp, playerTrail[j].x, playerTrail[j].y);
-			
+			console.log("Trail length: " + playerTrail.length);
 		}
 		if (gameActive) {
 			// Request the positions yet again 
@@ -378,12 +379,10 @@
 				</table>
 				<table border='1'>
 					<tr>
-						<td class='unpressed' id='gamestatus'>disconnected</td>
+						<td>status:</td><td class='unpressed' id='gamestatus'>disconnected</td>
 					</tr>
-				</table>
-				<table border='1'>
 					<tr>
-						<td id='pingtime'>---</td>
+						<td>ping time:</td><td id='pingtime'>---</td>
 					</tr>
 				</table>
 			</td>
