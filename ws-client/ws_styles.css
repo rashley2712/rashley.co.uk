@@ -1,3 +1,7 @@
+body {
+	font-family: arial;
+}
+
 .status_message {
 	background-color: lightgray;
     border: 1px solid #777;

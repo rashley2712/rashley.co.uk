@@ -159,7 +159,7 @@
 				$('#connectButton').text("Disconnect");
 				$('#usernameField').toggleClass("connected", true);
 				Socket.send("connect|" + username);
-				changeConnectedStatus(1);
+				//changeConnectedStatus(1);
 			}
 
 			Socket.onclose = function() {
@@ -172,7 +172,6 @@
 				users = [];
 				drawUsersTable();
 				gameActive = false;
-				changeConnectedStatus(0);
 				$('#connectButton').text("Connect");
 				$('#usernameField').toggleClass("connected", false);
  			}
@@ -217,7 +216,9 @@
 				if (responseObject.msg=="stop") {
 					gameActive = false;
 					debug(JSON.stringify(responseObject.data));
-					changeConnectedStatus(2);  // Change back to ready.
+					playerStatus = 1; 
+					changeConnectedStatus();  // Change back to ready.
+					Socket.send("updatestatus|" + username + "|" + playerStatus);
 				}
 				
 				if(responseObject.msg=="positions") {
@@ -239,11 +240,8 @@
 
 			Socket.onerror = function() {
 				debug("Error: Could not open socket connection.");
-				changeConnectedStatus(0);	
-				if (userHeartBeat!=0) {
-					clearInterval(userHeartBeat);
-					userHeartBeat = 0;
-				}			
+				// changeConnectedStatus(0);	
+					
 			}
 		} else {
 			debug("Disconnecting from the server.");
@@ -264,7 +262,7 @@
 	}
 	
 	function sendKey(direction, status) {
-		if (connected) {
+		if (playerStatus == 3) {
 			Socket.send("keypress|" + direction + "|" + status);
 		}
 	}
