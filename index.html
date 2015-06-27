@@ -32,20 +32,6 @@
 		return input.toString();
 	}
 
-	function formatTime(date) {
-		var hours;
-		var minutes;
-		var seconds;
-		var timeString;
-	
-		hours = date.getHours();
-	 	minutes = date.getMinutes();
-		seconds = date.getSeconds();
-		
-		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
-		return timeString;
-	}
-	
 	function getLocation() {
 	    if (navigator.geolocation) {
 	        navigator.geolocation.getCurrentPosition(showPosition);
@@ -62,12 +48,24 @@
 		accuracy = geoPosition.coords.accuracy;
 		var latlonString = position.coords.latitude + "," + position.coords.longitude;
 		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlonString+"&zoom=14&size=400x300&sensor=false";
+		var earth_radius = 6371E3;
+		var degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
+		var decimal_places = Math.round(Math.log10(1/degrees_accuracy));
+		var rounded_lat = geoPosition.coords.latitude.toPrecision(2 + decimal_places);
+		var rounded_long = geoPosition.coords.longitude.toPrecision(2 + decimal_places);;
+		console.log("decimal places:", decimal_places);
+		console.log("lat, long:", rounded_lat, rounded_long);
 		document.getElementById("mapholder").innerHTML = "<img src='"+img_url+"'>";
 		
-		var latlonString = position.coords.latitude + "," + position.coords.longitude + "  [" + accuracy +"m]";
+		var latlonString = rounded_lat + "," + rounded_long + "  [" + accuracy +"m] " + degrees_accuracy;
 		$('#locationField').text(latlonString);
 		
-		$('#altitudeField').text(geoPosition.coords.altitude);
+		height = geoPosition.coords.altitude;
+		if (height!=null) {
+			tableBit = "<tr><td>Height</td><td><div id=\"altitudeField\">?? m</div></td></tr>";
+			$('#heightPlaceholder').HTML(tableBit);
+			$('#altitudeField').text(geoPosition.coords.altitude);
+		}
 	}
 	
 	function formatUTCTime(date) {
@@ -79,6 +77,20 @@
 		hours = date.getUTCHours();
 	 	minutes = date.getUTCMinutes();
 		seconds = date.getUTCSeconds();
+		
+		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return timeString;
+	}
+	
+	function formatTime(date) {
+		var hours;
+		var minutes;
+		var seconds;
+		var timeString;
+	
+		hours = date.getHours();
+	 	minutes = date.getMinutes();
+		seconds = date.getSeconds();
 		
 		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
 		return timeString;
@@ -142,14 +154,7 @@
 					<div id="locationField">(??, ??)</div>
 				</td>
 			</tr>
-			<tr>
-				<td>
-					Height
-				</td>
-				<td>
-					<div id="altitudeField">?? m</div>
-				</td>
-			</tr>
+			<div id="heightPlaceholder"></div>
 		</table>
 	</td>
 	</tr>
