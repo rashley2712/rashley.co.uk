@@ -10,7 +10,8 @@
 	// Call my start up method after the page has finished loading
 	window.addEventListener("load", eventWindowLoaded, false);
 	var timerID = null;
-	var lat, lon;
+	var geoPosition = null;
+	var positionKnown = false;
 
 	function eventWindowLoaded() {
 		console.log("The page has loaded.");
@@ -50,16 +51,23 @@
 	        navigator.geolocation.getCurrentPosition(showPosition);
 	    } else {
 	        console.log = "Geolocation is not supported by this browser.";
+			positionKnown = false;
 	    }
 	}
 	
 	function showPosition(position) {
-		console.log("Position");
+		positionKnown = true;
+		geoPosition = position;
 		console.log(position);
-		var latlon = position.coords.latitude + "," + position.coords.longitude;
-		$('#locationField').text(latlon);
-		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlon+"&zoom=14&size=400x300&sensor=false";
+		accuracy = geoPosition.coords.accuracy;
+		var latlonString = position.coords.latitude + "," + position.coords.longitude;
+		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlonString+"&zoom=14&size=400x300&sensor=false";
 		document.getElementById("mapholder").innerHTML = "<img src='"+img_url+"'>";
+		
+		var latlonString = position.coords.latitude + "," + position.coords.longitude + "  [" + accuracy +"m]";
+		$('#locationField').text(latlonString);
+		
+		$('#altitudeField').text(geoPosition.coords.altitude);
 	}
 	
 	function formatUTCTime(date) {
@@ -125,6 +133,7 @@
 				<td>
 					<div id="UTCtimeField">hh:mm:ss</div>
 				</td>
+			</tr>
 			<tr>
 				<td>
 					Location
@@ -133,6 +142,13 @@
 					<div id="locationField">(??, ??)</div>
 				</td>
 			</tr>
+			<tr>
+				<td>
+					Height
+				</td>
+				<td>
+					<div id="altitudeField">?? m</div>
+				</td>
 			</tr>
 		</table>
 	</td>
