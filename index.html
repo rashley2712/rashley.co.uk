@@ -3,29 +3,90 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<title>rashley.co.uk</title>
 	</head>
+
+<script src="ws-client/jquery.min.js"></script>
+
+<script type="text/javascript">
+	// Call my start up method after the page has finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	var timerID = null;
+
+	function eventWindowLoaded() {
+		console.log("The page has loaded.");
+		timerID = setInterval(clockTicker, 1000);
+	}
+	
+	function clockTicker() {
+		now = new Date();
+		console.log(now);
+		localTimeString = formatTime(now) + " (" + now.toString().match(/\(([A-Za-z\s].*)\)/)[1] + ")";
+		$('#timeField').text(localTimeString);
+	}
+	
+	function zeroPad(input) {
+		if (input < 10) return "0" + input.toString();
+		return input.toString();
+	}
+
+	function formatTime(date) {
+		var hours;
+		var minutes;
+		var seconds;
+		var timeString;
+	
+		hours = date.getHours();
+	 	minutes = date.getMinutes();
+		seconds = date.getSeconds();
+		
+		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return timeString;
+	}
+</script>
+	
+
+
 <body>
 
 <h1>rashley.co.uk</h1>
-	<ul>
-		<li><a href="canvas-experiments/index.html">Canvas graphics experiments</a></li>
-		<li>Websockets <a href="ws-client/ws_client.html">client</a> - <a href="ws-client/ws_viewer.html">viewer</a></li>
-		<li><a href="http://news.bbc.co.uk">BBC News</a></li>
-		<li>Astronomy web cams
-			<ul>
-				<li><a href="http://www.not.iac.es/weather/">NOT weather page</a></li>
-				<li><a href="http://1.179.136.234/weather/">Thai National Telescope</a></li>
-				<li><a href="http://catserver.ing.iac.es/weather/archive/concam/index.php">Concam at ING</a></li>
-				<li><a href="http://wasp.warwick.ac.uk/swasp/main/monitor/webmon/swnstatus.html">SuperWASP North status</a></li>
-			</ul>
-		</li>
-		<li>Astronomy scheduling
-			<ul>
-				<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/CheckList.html">Observing checklist</a></li>
-				<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/phaseII/WHT-2015-05/">ULTRACAM phase II [WHT/2015A]</a></li>
-				<li><a href="http://catserver.ing.iac.es/schedules/index.php?action=schedules">ING Schedules</a></li>
-			</ul>
-		</li>
-	</ul>
+
+<table>
+	
+	<tr>
+	<td>
+		<ul>
+			<li><a href="canvas-experiments/index.html">Canvas graphics experiments</a></li>
+			<li>Websockets <a href="ws-client/ws_client.html">client</a> - <a href="ws-client/ws_viewer.html">viewer</a></li>
+			<li><a href="http://news.bbc.co.uk">BBC News</a></li>
+			<li>Astronomy web cams
+				<ul>
+					<li><a href="http://www.not.iac.es/weather/">NOT weather page</a></li>
+					<li><a href="http://1.179.136.234/weather/">Thai National Telescope</a></li>
+					<li><a href="http://catserver.ing.iac.es/weather/archive/concam/index.php">Concam at ING</a></li>
+					<li><a href="http://wasp.warwick.ac.uk/swasp/main/monitor/webmon/swnstatus.html">SuperWASP North status</a></li>
+				</ul>
+			</li>
+			<li>Astronomy scheduling
+				<ul>
+					<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/CheckList.html">Observing checklist</a></li>
+					<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/phaseII/WHT-2015-05/">ULTRACAM phase II [WHT/2015A]</a></li>
+					<li><a href="http://catserver.ing.iac.es/schedules/index.php?action=schedules">ING Schedules</a></li>
+				</ul>
+			</li>
+		</ul>
+	</td>
+	<td align="center">
+		<table>
+			<tr><td>
+					Local time
+				</td>
+				<td>
+					<div id="timeField">hh:mm:ss</div>
+				</td>
+			</tr>
+		</table>
+	</td>
+	</tr>
+</table>
 </body>
 
 </html>
