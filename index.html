@@ -3,29 +3,163 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<title>rashley.co.uk</title>
 	</head>
+
+<script src="ws-client/jquery.min.js"></script>
+
+<script type="text/javascript">
+	// Call my start up method after the page has finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	var timerID = null;
+	var geoPosition = null;
+	var positionKnown = false;
+
+	function eventWindowLoaded() {
+		console.log("The page has loaded.");
+		timerID = setInterval(clockTicker, 1000);
+		getLocation();
+	}
+	
+	function clockTicker() {
+		now = new Date();
+		// console.log(now);
+		localTimeString = formatTime(now) + " (" + now.toString().match(/\(([A-Za-z\s].*)\)/)[1] + ")";
+		$('#timeField').text(localTimeString);
+		$('#UTCtimeField').text(formatUTCTime(now));
+	}
+	
+	function zeroPad(input) {
+		if (input < 10) return "0" + input.toString();
+		return input.toString();
+	}
+
+	function getLocation() {
+	    if (navigator.geolocation) {
+	        navigator.geolocation.getCurrentPosition(showPosition);
+	    } else {
+	        console.log = "Geolocation is not supported by this browser.";
+			positionKnown = false;
+	    }
+	}
+	
+	function showPosition(position) {
+		positionKnown = true;
+		geoPosition = position;
+		console.log(position);
+		accuracy = geoPosition.coords.accuracy;
+		var latlonString = position.coords.latitude + "," + position.coords.longitude;
+		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlonString+"&zoom=14&size=400x300&sensor=false";
+		var earth_radius = 6371E3;
+		var degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
+		var decimal_places = Math.round(Math.log10(1/degrees_accuracy));
+		var rounded_lat = geoPosition.coords.latitude.toPrecision(2 + decimal_places);
+		var rounded_long = geoPosition.coords.longitude.toPrecision(2 + decimal_places);;
+		console.log("decimal places:", decimal_places);
+		console.log("lat, long:", rounded_lat, rounded_long);
+		document.getElementById("mapholder").innerHTML = "<img src='"+img_url+"'>";
+		
+		var latlonString = rounded_lat + "," + rounded_long + "  [" + accuracy +"m] " + degrees_accuracy;
+		$('#locationField').text(latlonString);
+		
+		height = geoPosition.coords.altitude;
+		if (height!=null) {
+			tableBit = "<tr><td>Height</td><td><div id=\"altitudeField\">?? m</div></td></tr>";
+			$('#heightPlaceholder').HTML(tableBit);
+			$('#altitudeField').text(geoPosition.coords.altitude);
+		}
+	}
+	
+	function formatUTCTime(date) {
+		var hours;
+		var minutes;
+		var seconds;
+		var timeString;
+	
+		hours = date.getUTCHours();
+	 	minutes = date.getUTCMinutes();
+		seconds = date.getUTCSeconds();
+		
+		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return timeString;
+	}
+	
+	function formatTime(date) {
+		var hours;
+		var minutes;
+		var seconds;
+		var timeString;
+	
+		hours = date.getHours();
+	 	minutes = date.getMinutes();
+		seconds = date.getSeconds();
+		
+		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return timeString;
+	}
+</script>
+	
+
+
 <body>
 
-<h1>rashley.co.uk</h1>
-	<ul>
-		<li><a href="canvas-experiments/index.html">Canvas graphics experiments</a></li>
-		<li>Websockets <a href="ws-client/ws_client.html">client</a> - <a href="ws-client/ws_viewer.html">viewer</a></li>
-		<li><a href="http://news.bbc.co.uk">BBC News</a></li>
-		<li>Astronomy web cams
-			<ul>
-				<li><a href="http://www.not.iac.es/weather/">NOT weather page</a></li>
-				<li><a href="http://1.179.136.234/weather/">Thai National Telescope</a></li>
-				<li><a href="http://catserver.ing.iac.es/weather/archive/concam/index.php">Concam at ING</a></li>
-				<li><a href="http://wasp.warwick.ac.uk/swasp/main/monitor/webmon/swnstatus.html">SuperWASP North status</a></li>
-			</ul>
-		</li>
-		<li>Astronomy scheduling
-			<ul>
-				<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/CheckList.html">Observing checklist</a></li>
-				<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/phaseII/WHT-2015-05/">ULTRACAM phase II [WHT/2015A]</a></li>
-				<li><a href="http://catserver.ing.iac.es/schedules/index.php?action=schedules">ING Schedules</a></li>
-			</ul>
-		</li>
-	</ul>
+<img src="cover_image.png">
+
+<table>
+	
+	<tr>
+	<td>
+		<ul>
+			<li><a href="canvas-experiments/index.html">Canvas graphics experiments</a></li>
+			<li>Websockets <a href="ws-client/ws_client.html">client</a> - <a href="ws-client/ws_viewer.html">viewer</a></li>
+			<li><a href="http://news.bbc.co.uk">BBC News</a></li>
+			<li>Astronomy web cams
+				<ul>
+					<li><a href="http://www.not.iac.es/weather/">NOT weather page</a></li>
+					<li><a href="http://1.179.136.234/weather/">Thai National Telescope</a></li>
+					<li><a href="http://catserver.ing.iac.es/weather/archive/concam/index.php">Concam at ING</a></li>
+					<li><a href="http://wasp.warwick.ac.uk/swasp/main/monitor/webmon/swnstatus.html">SuperWASP North status</a></li>
+				</ul>
+			</li>
+			<li>Astronomy scheduling
+				<ul>
+					<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/CheckList.html">Observing checklist</a></li>
+					<li><a href="http://deneb.astro.warwick.ac.uk/phsaap/phaseII/WHT-2015-05/">ULTRACAM phase II [WHT/2015A]</a></li>
+					<li><a href="http://catserver.ing.iac.es/schedules/index.php?action=schedules">ING Schedules</a></li>
+				</ul>
+			</li>
+		</ul>
+	</td>
+	<td align="center">
+		<table>
+			<tr>
+				<td>
+					Local time
+				</td>
+				<td>
+					<div id="timeField">hh:mm:ss</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					Universal time
+				</td>
+				<td>
+					<div id="UTCtimeField">hh:mm:ss</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					Location
+				</td>
+				<td>
+					<div id="locationField">(??, ??)</div>
+				</td>
+			</tr>
+			<div id="heightPlaceholder"></div>
+		</table>
+	</td>
+	</tr>
+</table>
+<div id="mapholder"></div>
 </body>
 
 </html>
