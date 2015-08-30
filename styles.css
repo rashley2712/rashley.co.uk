@@ -3,8 +3,8 @@ body
 font-size:75%;
 font-family:verdana,arial,'sans serif';
 background-repeat:repeat-x;
-background-color:#79bad6;
-color:#000080;
+background-color:#f5f4f0;
+color:#b08d44;
 margin: 0 auto;
 }
 
@@ -18,7 +18,24 @@ td {vertical-align:top;}
 ul {list-style:circle;}
 ol {list-style:decimal;}
 
-a:link {color:#000080;}
-a:hover {color:red;}
+/* unvisited link */
+a:link {
+    color: #b08d44;
+}
 
-.footer {color:#eeeeee;font-style:italic;}
+/* visited link */
+a:visited {
+    color: #b08d44;
+}
+
+/* mouse over link */
+a:hover {
+    color: #cb8571;
+}
+
+/* selected link */
+a:active {
+    color: #b08d44;
+}
+
+.footer {color:#b08d44;font-style:italic;}
