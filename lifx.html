@@ -1,0 +1,40 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="styles.css">
+		<title>rashley.co.uk</title>
+	</head>
+
+<script src="ws-client/jquery.min.js"></script>
+
+<script type="text/javascript">
+	// Call my start up method after the page has finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	function formatTime(date) {
+		var hours;
+		var minutes;
+		var seconds;
+		var timeString;
+	
+		hours = date.getHours();
+	 	minutes = date.getMinutes();
+		seconds = date.getSeconds();
+		
+		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return timeString;
+	}
+</script>
+	
+
+
+<body>
+
+
+<h1>LIFX test controller</h1>
+
+<hr/>
+<img src="lifx_logo.png">
+
+</body>
+
+</html>
