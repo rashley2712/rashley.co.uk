@@ -1,14 +1,117 @@
 <html>
 	<head>
-		<link rel="stylesheet" type="text/css" href="styles.css">
-		<title>rashley.co.uk</title>
+		<title>rashley.co.uk - LIFX controller</title>
 	</head>
 
-<script src="ws-client/jquery.min.js"></script>
-
+<link href="bootstrap.min.css" rel="stylesheet">
+<link href="bootstrap-switch.css" rel="stylesheet">
+<style>
+.bootstrap-switch { height: 2.2em }
+tr.active {background-color:#aaeeaa;}
+</style>
+<script src="jquery.js"></script>
+<script src="bootstrap-switch.js"></script>
+		
 <script type="text/javascript">
 	// Call my start up method after the page has finished loading
 	window.addEventListener("load", eventWindowLoaded, false);
+	
+	function eventWindowLoaded() {
+		$("[name='switch1']").bootstrapSwitch();
+		$('input[name="switch1"]').on('switchChange.bootstrapSwitch', function(event, state) {
+		  console.log(this); // DOM element
+		  console.log(event); // jQuery event
+		  console.log(state); // true | false
+		});
+	}
+	
+	function switched() {
+		console.log("button switched");
+	}
+	
+	function zeroPad(input) {
+		if (input < 10) return "0" + input.toString();
+		return input.toString();
+	}
+
+	
+	
+	function httpGetAsync(theUrl, token)
+	{
+	    var xmlHttp = new XMLHttpRequest();
+	    xmlHttp.onreadystatechange = function() { 
+	        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+	            bulbsFound(xmlHttp.responseText);
+	        if (xmlHttp.readyState == 4 && xmlHttp.status != 200)
+	        	httpFailed(xmlHttp.responseText)
+	    }
+	    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+		xmlHttp.setRequestHeader('Authorization', "Bearer " + token)
+		console.log(token);
+	    xmlHttp.send(null);
+	}
+	
+	function bulbsFound(responseText) {
+		console.log("HTTP returned:");
+		console.log(responseText);
+		bulbsData = JSON.parse(responseText);
+		bulbsData.sort(function(a,b) {return(a.seconds_since_seen - b.seconds_since_seen)});
+		drawBulbsTable(bulbsData);
+	}
+	
+	function httpFailed(responseText) {
+		console.log("HTTP failed...");
+		console.log(responseText);
+		
+	}
+	
+	function drawBulbsTable(bulbsData) {
+		tableHTML = "<table>";
+		tableHTML+= "<tr> <th>Switch</th> <th>ID</th> <th>Label</th> <th>Connected</th> <th>Location</th> <th>Since Last Seen</th> </tr>";
+		for (i in bulbsData) {
+			console.log(i, bulbsData[i]);
+			connected = bulbsData[i]['connected'];
+			if (!connected) tableHTML+="<tr class='offline'>"; else tableHTML+="<tr class='active'>";
+			if (connected) tableHTML+= "<td><form></td>"; else tableHTML+= "<td>&nbsp;</td>";
+			tableHTML+="<td>" + bulbsData[i]['id'] + "</td>";
+			tableHTML+="<td>" + bulbsData[i]['label'] + "</td>";
+			tableHTML+="<td>" + bulbsData[i]['connected'] + "</td>";
+			bulbLocation = bulbsData[i]['location'];
+			tableHTML+="<td>" + bulbLocation['name'] + "</td>";
+			timeSinceLastSeen = formatTimeFromSeconds(bulbsData[i]['seconds_since_seen']);
+			tableHTML+="<td>" + timeSinceLastSeen + "</td>";
+			tableHTML+="</tr>";
+		}
+		tableHTML+="</table>"
+		$("#bulbstable").html(tableHTML);
+	}
+	
+	function getBulbStatus(){
+		LIFXURL = "https://api.lifx.com/v1beta1/lights/all";
+		token = $("#token").val();
+		httpGetAsync(LIFXURL, token);
+		
+	}
+	
+	function formatTimeFromSeconds(totalSeconds) {
+		var days;
+		var hours;
+		var minutes;
+		var seconds;
+		
+		days = Math.floor(totalSeconds/3600/24);
+		totalSeconds = totalSeconds - days*3600*24;
+		hours = Math.floor(totalSeconds/3600);
+		totalSeconds = totalSeconds - hours * 3600;
+		minutes = Math.floor(totalSeconds/60);
+		totalSeconds = totalSeconds - minutes * 60;
+		seconds = Math.floor(totalSeconds);
+		console.log(days, hours, minutes, seconds);
+		
+		if (days!=0) return days + " days, " + zeroPad(hours)+ ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		return zeroPad(hours)+ ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
+		
+	}
 	
 	function formatTime(date) {
 		var hours;
@@ -31,6 +134,16 @@
 
 
 <h1>LIFX test controller</h1>
+
+<span><input type="checkbox" name="switch1" checked></span>
+<form>
+	<label for="token">Your LIFX token</label>
+	<input type="text" id="token" value="c714e99751f3b6c8c2bb9a51c1a938a3962b56cfb2fd98057f5b36dc71d3052d">
+	<button type="button" id="getstatus" onclick="getBulbStatus()">Check bulb status</button>
+</form>
+
+<div id="bulbstable">No bulbs found.</div>
+
 
 <hr/>
 <img src="lifx_logo.png">

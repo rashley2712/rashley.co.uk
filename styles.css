@@ -12,8 +12,11 @@ h1 {font-size:200%;}
 h2 {font-size:140%;}
 h3 {font-size:110%;}
 
+table {font-size:100%;}
 th {background-color:#ADD8E6;}
 td {vertical-align:top;}
+
+tr.active {background-color:#aaeeaa;}
 
 ul {list-style:circle;}
 ol {list-style:decimal;}
