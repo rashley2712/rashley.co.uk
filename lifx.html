@@ -3,12 +3,7 @@
 		<title>rashley.co.uk - LIFX controller</title>
 	</head>
 
-<link href="bootstrap.min.css" rel="stylesheet">
-<link href="bootstrap-switch.css" rel="stylesheet">
-<style>
-.bootstrap-switch { height: 2.2em }
-tr.active {background-color:#aaeeaa;}
-</style>
+<link href="styles.css" rel="stylesheet">
 <script src="jquery.js"></script>
 <script src="bootstrap-switch.js"></script>
 		
@@ -17,24 +12,30 @@ tr.active {background-color:#aaeeaa;}
 	window.addEventListener("load", eventWindowLoaded, false);
 	
 	function eventWindowLoaded() {
-		$("[name='switch1']").bootstrapSwitch();
-		$('input[name="switch1"]').on('switchChange.bootstrapSwitch', function(event, state) {
-		  console.log(this); // DOM element
-		  console.log(event); // jQuery event
-		  console.log(state); // true | false
-		});
+		document.addEventListener( 
+		     'webkitTransitionStart', 
+		     transitionOver, false );
 	}
 	
-	function switched() {
-		console.log("button switched");
+	function transitionOver(event) {
+		console.log("Transition started...");
+		console.log(event);
+	}
+	
+	function switchClicked(switchID) {
+		console.log("button switched: " + switchID);
+		fullSwitchID = "switch-" + switchID;
+		switchElement = document.getElementById(fullSwitchID);
+		console.log(switchElement);
+		style = window.getComputedStyle(switchElement);
+		console.log(style);
+	    top = style.getPropertyValue('top');
 	}
 	
 	function zeroPad(input) {
 		if (input < 10) return "0" + input.toString();
 		return input.toString();
 	}
-
-	
 	
 	function httpGetAsync(theUrl, token)
 	{
@@ -65,6 +66,22 @@ tr.active {background-color:#aaeeaa;}
 		
 	}
 	
+	function generateSwitchHTML(switchID) {
+		//HTMLString = "<td><form><input type='button'></form></td>";
+		fullSwitchID = "switch-" + switchID;
+		HTMLString = "<td>";
+		HTMLString+="<div class='onoffswitch'>";
+    	HTMLString+="<input type='checkbox' name='onoffswitch' class='onoffswitch-checkbox' id='" + fullSwitchID +"' checked>";
+    	HTMLString+="<label class='onoffswitch-label' for='" + fullSwitchID + "\' onclick='switchClicked(\"" + switchID + "\")'>";
+        HTMLString+="<span class='onoffswitch-inner'></span>";
+        HTMLString+="<span class='onoffswitch-switch'></span>";
+    	HTMLString+="</label>";
+		HTMLString+="</div>";
+		HTMLString+="</td>";
+		console.log(HTMLString);
+		return HTMLString;
+	}
+	
 	function drawBulbsTable(bulbsData) {
 		tableHTML = "<table>";
 		tableHTML+= "<tr> <th>Switch</th> <th>ID</th> <th>Label</th> <th>Connected</th> <th>Location</th> <th>Since Last Seen</th> </tr>";
@@ -72,7 +89,7 @@ tr.active {background-color:#aaeeaa;}
 			console.log(i, bulbsData[i]);
 			connected = bulbsData[i]['connected'];
 			if (!connected) tableHTML+="<tr class='offline'>"; else tableHTML+="<tr class='active'>";
-			if (connected) tableHTML+= "<td><form></td>"; else tableHTML+= "<td>&nbsp;</td>";
+			if (connected) tableHTML+= generateSwitchHTML(bulbsData[i]['id']); else tableHTML+= "<td>&nbsp;</td>";
 			tableHTML+="<td>" + bulbsData[i]['id'] + "</td>";
 			tableHTML+="<td>" + bulbsData[i]['label'] + "</td>";
 			tableHTML+="<td>" + bulbsData[i]['connected'] + "</td>";
@@ -113,6 +130,7 @@ tr.active {background-color:#aaeeaa;}
 		
 	}
 	
+	
 	function formatTime(date) {
 		var hours;
 		var minutes;
@@ -135,7 +153,6 @@ tr.active {background-color:#aaeeaa;}
 
 <h1>LIFX test controller</h1>
 
-<span><input type="checkbox" name="switch1" checked></span>
 <form>
 	<label for="token">Your LIFX token</label>
 	<input type="text" id="token" value="c714e99751f3b6c8c2bb9a51c1a938a3962b56cfb2fd98057f5b36dc71d3052d">
@@ -144,6 +161,13 @@ tr.active {background-color:#aaeeaa;}
 
 <div id="bulbstable">No bulbs found.</div>
 
+<div class="onoffswitch">
+    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="amyonoffswitch">
+    <label class="onoffswitch-label" for="amyonoffswitch">
+        <span class="onoffswitch-inner"></span>
+        <span class="onoffswitch-switch"></span>
+    </label>
+</div>
 
 <hr/>
 <img src="lifx_logo.png">
