@@ -11,12 +11,25 @@
 	window.addEventListener("load", eventWindowLoaded, false);
 	var timerID = null;
 	var geoPosition = null;
-	var positionKnown = false;
-
+	var accuracy, latitude, longitude, altitude;
+	var earth_radius = 6371E3;
+	var degrees_accuracy, decimal_places;
+	
+	
 	function eventWindowLoaded() {
 		console.log("The page has loaded.");
 		timerID = setInterval(clockTicker, 1000);
-		getLocation();
+		if (localStorage.savedPosition) {
+			accuracy = localStorage.accuracy;
+			latitude = localStorage.latitude;
+			longitude = localStorage.longitude;
+			height = localStorage.altitude;
+			roundedLatitude = localStorage.roundedLatitude;
+			roundedLongitude = localStorage.roundedLongitude; 
+			degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
+			decimal_places = Math.round(Math.log10(1/degrees_accuracy));
+			showPosition();
+		}
 	}
 	
 	function clockTicker() {
@@ -34,37 +47,56 @@
 
 	function getLocation() {
 	    if (navigator.geolocation) {
-	        navigator.geolocation.getCurrentPosition(showPosition);
+	        navigator.geolocation.getCurrentPosition(foundPosition);
 	    } else {
 	        console.log = "Geolocation is not supported by this browser.";
 			positionKnown = false;
 	    }
 	}
 	
-	function showPosition(position) {
+	function refreshLocation() {
+		console.log("Refreshing location...");
+		getLocation();
+	}
+	
+	function foundPosition(geoPosition) {
 		positionKnown = true;
-		geoPosition = position;
-		console.log(position);
-		accuracy = geoPosition.coords.accuracy;
-		var latlonString = position.coords.latitude + "," + position.coords.longitude;
-		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlonString+"&zoom=14&size=400x300&sensor=false";
-		var earth_radius = 6371E3;
-		var degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
-		var decimal_places = Math.round(Math.log10(1/degrees_accuracy));
-		var rounded_lat = geoPosition.coords.latitude.toPrecision(2 + decimal_places);
-		var rounded_long = geoPosition.coords.longitude.toPrecision(2 + decimal_places);;
-		console.log("decimal places:", decimal_places);
-		console.log("lat, long:", rounded_lat, rounded_long);
+		console.log(geoPosition);
+		localStorage.savedPosition = true;
+		
+		accuracy =  geoPosition.coords.accuracy;
+		latitude = geoPosition.coords.latitude;
+		longitude = geoPosition.coords.longitude;
+		altitude = geoPosition.coords.altitude;
+		
+		localStorage.accuracy = accuracy;
+		localStorage.latitude = latitude;
+		localStorage.longitude = longitude;
+		localStorage.height = altitude;
+		
+		degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
+		decimal_places = Math.round(Math.log10(1/degrees_accuracy));
+		
+		roundedLatitude = geoPosition.coords.latitude.toPrecision(2 + decimal_places);
+		roundedLongitude = geoPosition.coords.longitude.toPrecision(2 + decimal_places);
+		localStorage.roundedLatitude = roundedLatitude;
+		localStorage.roundedLongitude = roundedLongitude; 
+		
+		showPosition();
+	}
+	
+	function showPosition() {
+		var latlonString = latitude + "," + longitude;
+		var img_url = "http://maps.googleapis.com/maps/api/staticmap?center="+latlonString+"&zoom=10&size=400x300&sensor=false";
 		document.getElementById("mapholder").innerHTML = "<img src='"+img_url+"'>";
 		
-		var latlonString = rounded_lat + "," + rounded_long + "  [" + accuracy +"m] " + degrees_accuracy;
+		var latlonString = roundedLatitude + "," + roundedLongitude + "  [" + accuracy +"m] ";
 		$('#locationField').text(latlonString);
 		
-		height = geoPosition.coords.altitude;
-		if (height!=null) {
+		if (altitude!=null) {
 			tableBit = "<tr><td>Height</td><td><div id=\"altitudeField\">?? m</div></td></tr>";
 			$('#heightPlaceholder').HTML(tableBit);
-			$('#altitudeField').text(geoPosition.coords.altitude);
+			$('#altitudeField').text(altitude);
 		}
 	}
 	
@@ -149,7 +181,7 @@
 			</tr>
 			<tr>
 				<td>
-					Location
+					<button value="refresh" onclick="refreshLocation()">Location</button>
 				</td>
 				<td>
 					<div id="locationField">(??, ??)</div>
