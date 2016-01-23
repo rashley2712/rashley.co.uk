@@ -5,6 +5,7 @@
 	</head>
 
 <script src="ws-client/jquery.min.js"></script>
+<script src="astrotools.js"></script>
 
 <script type="text/javascript">
 	// Call my start up method after the page has finished loading
@@ -14,6 +15,7 @@
 	var accuracy, latitude, longitude, altitude;
 	var earth_radius = 6371E3;
 	var degrees_accuracy, decimal_places;
+	var positionKnown = false;
 	
 	
 	function eventWindowLoaded() {
@@ -28,6 +30,7 @@
 			roundedLongitude = localStorage.roundedLongitude; 
 			degrees_accuracy = accuracy / earth_radius / 3.14159 * 180; 
 			decimal_places = Math.round(Math.log10(1/degrees_accuracy));
+			positionKnown = true;
 			showPosition();
 		}
 	}
@@ -38,6 +41,14 @@
 		localTimeString = formatTime(now) + " (" + now.toString().match(/\(([A-Za-z\s].*)\)/)[1] + ")";
 		$('#timeField').text(localTimeString);
 		$('#UTCtimeField').text(formatUTCTime(now));
+		jd = julianDate(now);
+		$('#JDField').text(decimalPlacesString(jd, 6));
+		if (positionKnown) {
+			LMSiderealTime = LM_Sidereal_Time(jd, roundedLongitude);
+			$('#LSTField').text(timeDecimalToHMS(LMSiderealTime));
+		
+		}
+
 	}
 	
 	function zeroPad(input) {
@@ -95,38 +106,11 @@
 		
 		if (altitude!=null) {
 			tableBit = "<tr><td>Height</td><td><div id=\"altitudeField\">?? m</div></td></tr>";
-			$('#heightPlaceholder').HTML(tableBit);
+			$('#heightPlaceholder').html(tableBit);
 			$('#altitudeField').text(altitude);
 		}
 	}
 	
-	function formatUTCTime(date) {
-		var hours;
-		var minutes;
-		var seconds;
-		var timeString;
-	
-		hours = date.getUTCHours();
-	 	minutes = date.getUTCMinutes();
-		seconds = date.getUTCSeconds();
-		
-		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
-		return timeString;
-	}
-	
-	function formatTime(date) {
-		var hours;
-		var minutes;
-		var seconds;
-		var timeString;
-	
-		hours = date.getHours();
-	 	minutes = date.getMinutes();
-		seconds = date.getSeconds();
-		
-		timeString = zeroPad(hours) + ":" + zeroPad(minutes) + ":" + zeroPad(seconds);
-		return timeString;
-	}
 </script>
 	
 
@@ -177,6 +161,22 @@
 				</td>
 				<td>
 					<div id="UTCtimeField">hh:mm:ss</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					Local Sidereal Time
+				</td>
+				<td>
+					<div id="LSTField">hh:mm:ss</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					Julian Date
+				</td>
+				<td>
+					<div id="JDField">0.000</div>
 				</td>
 			</tr>
 			<tr>
