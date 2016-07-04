@@ -1,0 +1,212 @@
+<html>
+	<head>
+		<title>rashley.co.uk - LIFX from Sheets</title>
+		<meta charset="UTF-8">
+	</head>
+
+<link href="styles.css" rel="stylesheet">
+<script src="jquery.js">
+</script>
+<script type="text/javascript">
+	var CLIENT_ID = '481271605956-ot4pple75738om9dp2npje0e9ndklhe9.apps.googleusercontent.com';
+
+	var SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
+	
+
+    /**
+     * Check if current user has authorized this application.
+     */
+    function checkAuth() {
+      console.log("In checkAuth");
+	  gapi.auth.authorize(
+        {
+          'client_id': CLIENT_ID,
+          'scope': SCOPES.join(' '),
+          'immediate': true
+        }, handleAuthResult);
+    }
+	
+    /**
+     * Handle response from authorization server.
+     *
+     * @param {Object} authResult Authorization result.
+     */
+    function handleAuthResult(authResult) {
+      var authorizeDiv = document.getElementById('authorize-div');
+      if (authResult && !authResult.error) {
+        // Hide auth UI, then load client library.
+        authorizeDiv.style.display = 'none';
+        authenticationPassed();
+      } else {
+        // Show auth UI, allowing the user to initiate authorization by
+        // clicking authorize button.
+        authorizeDiv.style.display = 'inline';
+      }
+    }
+	
+    
+	/**
+     * Initiate auth flow in response to user clicking authorize button.
+     *
+     * @param {Event} event Button click event.
+     */
+    function handleAuthClick(event) {
+      gapi.auth.authorize(
+        {client_id: CLIENT_ID, scope: SCOPES, immediate: false},
+        handleAuthResult);
+      return false;
+    }
+
+    /**
+     * Load Sheets API client library.
+     */
+    function loadSheetsApi() {
+      var discoveryUrl =
+          'https://sheets.googleapis.com/$discovery/rest?version=v4';
+      gapi.client.load(discoveryUrl).then(listMajors);
+    }
+
+   
+   /**
+    * Append a pre element to the body containing the given message
+    * as its text node.
+    *
+    * @param {string} message Text to be placed in pre element.
+    */
+   function appendPre(message) {
+     var pre = document.getElementById('output');
+     var textContent = document.createTextNode(message + '\n');
+     pre.appendChild(textContent);
+   }
+
+	// Call my start up method after the page has finished loading
+	// window.addEventListener("load", eventWindowLoaded, false);
+	
+	function authenticationPassed() {
+		console.log("Authentication step passed.");
+    	var discoveryUrl = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
+		gapi.client.load(discoveryUrl).then(googleAPIloaded);
+		console.log("The Google API is now available.")
+        
+	}
+	
+	function googleAPIloaded(data) {
+		console.log("The Google API is now available.")
+        getData();
+	}
+	
+	function getData() {
+        gapi.client.sheets.spreadsheets.values.get({
+          spreadsheetId: '11TsvDkepVR-CMFh0mDn8HMlLZyRT7n_M2DarulbEIKk',
+          range: 'Sheet1!A:C',
+        }).then( handleData );
+		
+	}
+	
+	var eventList = [];
+	
+	function createHTMLTable(DOMid, items) {
+		tableHTML = "<table>";
+		tableHTML+= "<tr>";
+		firstItem = items[0];
+		keys = Object.keys(firstItem);
+		for (k in keys) {
+			console.log("Key: " + keys[k]);
+			tableHTML+= "<th>" + keys[k] + "</th>";
+		}
+		tableHTML+= "</tr>";
+		for (i in items) {
+			tableHTML+= "<tr>";
+			for (k in keys) {
+				tableHTML+= "<td>" + items[i][keys[k]] + "</td>";
+			}
+			tableHTML+= "</tr>";
+		}
+		tableHTML+= "</table>";
+		console.log(tableHTML);
+		$("#eventstable").html(tableHTML);
+		
+	}
+	
+	function handleData(data) {
+		range = data.result;
+		headings = range.values[0];
+		timeHeading = "Time";
+		subjectHeading = "Subject";
+		alertHeading = "Alert";
+		
+		eventList = [];
+		for (i in range.values){
+			if (i>1) {
+				// console.log(i);
+				// console.log(range.values[i]);
+				eventObject = {};
+				for (j=0; j < range.values[i].length; j++) {
+					// console.log(j + " - " + headings[j] + ": " + range.values[i][j]);
+					eventObject[headings[j]] = range.values[i][j];
+				
+					}
+				eventList.push(eventObject);
+				}
+			}
+			
+		for (i in eventList) {
+			console.log(eventList[i]);
+		} 
+		createHTMLTable("eventstable", eventList);
+		createEventQueue(eventList);
+	}
+	
+	function createEventQueue(eventList) {
+		timeKey = "Time";
+		
+		for (e in eventList) {
+			timeString = eventList[e][timeKey];
+			timeParts = timeString.split(":");
+			timeData = new Date();
+			timeData.setHours(parseInt(timeParts[0]));
+			timeData.setMinutes(parseInt(timeParts[1]));
+			timeData.setSeconds(parseInt(timeParts[2]));
+			console.log(timeData.toTimeString());
+		}
+	}
+	
+	function refreshClock() {
+		currentTime = new Date();
+		timeString = currentTime.toTimeString();
+		$("#clock").html(timeString);
+	}
+	
+	function initJS() {
+		console.log("initJS");
+		setInterval(getData, 5000);
+		setInterval(refreshClock, 1000);
+	}
+	
+	initJS();
+	
+</script>
+
+<script src="https://apis.google.com/js/client.js?onload=checkAuth"></script>
+
+<body onload="initJS">
+<h1>LIFX controlled from a Google (trix) spreadsheet</h1>
+
+    <div id="authorize-div" style="display: none">
+      <span>Authorize access to Google Sheets API</span>
+      <!--Button for the user to click to initiate auth sequence -->
+      <button id="authorize-button" onclick="handleAuthClick(event)">
+        Authorize
+      </button>
+    </div>
+<div>Current time: <span id="clock">hh:mm:ss
+</span></div>
+	
+<div id="eventstable"></div>
+
+<hr/>
+<img src="lifx_logo.png">
+
+
+</body>
+</html>
