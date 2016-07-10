@@ -1,6 +1,7 @@
 <html>
 	<head>
 		<title>rashley.co.uk - LIFX controller</title>
+		<meta charset="UTF-8">
 	</head>
 
 <link href="styles.css" rel="stylesheet">
@@ -26,10 +27,15 @@
 		console.log("button switched: " + switchID);
 		fullSwitchID = "switch-" + switchID;
 		switchElement = document.getElementById(fullSwitchID);
-		console.log(switchElement);
+		//console.log(switchElement);
 		style = window.getComputedStyle(switchElement);
-		console.log(style);
+		//console.log(style);
 	    top = style.getPropertyValue('top');
+	    LIFXURL = "https://api.lifx.com/v1/lights/d073d501c1ff/toggle";
+	    token = $("#token").val();
+		httpGetAsync(LIFXURL, token);
+
+	    
 	}
 	
 	function zeroPad(input) {
@@ -104,7 +110,8 @@
 	}
 	
 	function getBulbStatus(){
-		LIFXURL = "https://api.lifx.com/v1beta1/lights/all";
+		LIFXURL = "https://api.lifx.com/v1/lights/all";
+		LIFXURL = "https://api.lifx.com/v1/lights/d073d501c1ff/toggle";
 		token = $("#token").val();
 		httpGetAsync(LIFXURL, token);
 		
@@ -146,8 +153,6 @@
 	}
 </script>
 	
-<script src = "https://docs.google.com/spreadsheets/d/1S4ILxNf13B9_bbBeHjGJUIFFUjq3_XYybF-Dk8_jnhA/pub?output=csv"/>
-
 <body>
 
 
@@ -160,14 +165,6 @@
 </form>
 
 <div id="bulbstable">No bulbs found.</div>
-
-<div class="onoffswitch">
-    <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="amyonoffswitch">
-    <label class="onoffswitch-label" for="amyonoffswitch">
-        <span class="onoffswitch-inner"></span>
-        <span class="onoffswitch-switch"></span>
-    </label>
-</div>
 
 <hr/>
 <img src="lifx_logo.png">
