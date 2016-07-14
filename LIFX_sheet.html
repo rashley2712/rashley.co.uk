@@ -12,6 +12,7 @@
 
 	var SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
 	
+	var currentTime = new Date();
 
     /**
      * Check if current user has authorized this application.
@@ -153,8 +154,8 @@
 		for (i in eventList) {
 			console.log(eventList[i]);
 		} 
-		createHTMLTable("eventstable", eventList);
 		createEventQueue(eventList);
+		createHTMLTable("eventstable", eventList);
 	}
 	
 	function createEventQueue(eventList) {
@@ -166,13 +167,40 @@
 			timeData = new Date();
 			timeData.setHours(parseInt(timeParts[0]));
 			timeData.setMinutes(parseInt(timeParts[1]));
-			timeData.setSeconds(parseInt(timeParts[2]));
-			console.log(timeData.toTimeString());
+			timeData.setSeconds(0);
+			eventList[e].timeValue = timeData;
+			eventList[e].timeMilliseconds = timeData.getTime();
+			// console.log(eventList[e]);
 		}
+		eventList.sort( function(a, b) {
+			return (parseInt(a.timeMilliseconds) - parseInt(b.timeMilliseconds));
+			});
+		
+		for (e in eventList) {
+			console.log(eventList[e]);
+		}		
+	}
+	
+	function findEvents(startTime, endTime) {
+		startTimeMS = startTime.getTime();
+		endTimeMS = endTime.getTime();
+		missedEvents = [];
+		for (e in eventList) {
+			time = eventList[e].timeMilliseconds;
+			if ((time>=startTimeMS) && (time<=endTimeMS)) missedEvents.push(eventList[e]);
+		}
+		
+		return missedEvents;
 	}
 	
 	function refreshClock() {
+		previousTime = currentTime;
 		currentTime = new Date();
+		timeElapsed = currentTime - previousTime;
+		missedEvents = findEvents(previousTime, currentTime);
+		if (missedEvents.length == 0) console.log("No missed events"); 
+		   else console.log(missedEvents);
+		console.log(timeElapsed);
 		timeString = currentTime.toTimeString();
 		$("#clock").html(timeString);
 	}

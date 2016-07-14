@@ -31,9 +31,9 @@
 		style = window.getComputedStyle(switchElement);
 		//console.log(style);
 	    top = style.getPropertyValue('top');
-	    LIFXURL = "https://api.lifx.com/v1/lights/d073d501c1ff/toggle";
+	    LIFXURL = "https://api.lifx.com/v1/lights/" + switchID + "/toggle";
 	    token = $("#token").val();
-		httpGetAsync(LIFXURL, token);
+		httpPOSTAsync(LIFXURL, token);
 
 	    
 	}
@@ -41,6 +41,10 @@
 	function zeroPad(input) {
 		if (input < 10) return "0" + input.toString();
 		return input.toString();
+	}
+	
+	function postCompleted(responseText) {
+		console.log("Post completed");
 	}
 	
 	function httpGetAsync(theUrl, token)
@@ -53,6 +57,21 @@
 	        	httpFailed(xmlHttp.responseText)
 	    }
 	    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+		xmlHttp.setRequestHeader('Authorization', "Bearer " + token)
+		console.log(token);
+	    xmlHttp.send(null);
+	}
+	
+		function httpPOSTAsync(theUrl, token)
+	{
+	    var xmlHttp = new XMLHttpRequest();
+	    xmlHttp.onreadystatechange = function() { 
+	        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+	            postCompleted(xmlHttp.responseText);
+	        if (xmlHttp.readyState == 4 && xmlHttp.status != 200)
+	        	httpFailed(xmlHttp.responseText)
+	    }
+	    xmlHttp.open("POST", theUrl, true); // true for asynchronous 
 		xmlHttp.setRequestHeader('Authorization', "Bearer " + token)
 		console.log(token);
 	    xmlHttp.send(null);
@@ -111,7 +130,6 @@
 	
 	function getBulbStatus(){
 		LIFXURL = "https://api.lifx.com/v1/lights/all";
-		LIFXURL = "https://api.lifx.com/v1/lights/d073d501c1ff/toggle";
 		token = $("#token").val();
 		httpGetAsync(LIFXURL, token);
 		
