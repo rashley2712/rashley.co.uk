@@ -1,0 +1,77 @@
+<html>
+<head>
+	<title>ISIS grating calculator</title>
+</head>
+<body>
+
+<script>
+window.addEventListener("load", eventWindowLoaded, false);
+
+var gratingData = {
+	"R600B": 
+		{'blaze': 3900, 'total': 1825, 'unvignetted':1256, 'vignetted':1636, 'dispersion': 0.45, 'slitwidth': 0.89, 'resolution':2.02},
+	"R1200B": 
+		{'blaze': 4000, 'total': 940, 'unvignetted':646, 'vignetted':842, 'dispersion': 0.23, 'slitwidth': 1.08, 'resolution':0.85}
+	};
+	
+function eventWindowLoaded() {
+	currentGrating = "R600B";
+	selectGrating(currentGrating);
+}
+
+function dragWavelength(value) {
+	document.querySelector('#cenwave').value = value;
+	uvstart = parseInt(value) - currentGratingData.unvignetted / 2;
+	uvend = parseInt(value) + currentGratingData.unvignetted / 2;
+	vstart = parseInt(value) - currentGratingData.vignetted / 2;
+	vend = parseInt(value) + currentGratingData.vignetted / 2;
+	document.querySelector("#unvignettedstart").innerText = uvstart;
+	document.querySelector("#unvignettedend").innerText = uvend;
+	document.querySelector("#vignettedstart").innerText = vstart;
+	document.querySelector("#vignettedend").innerText = vend;
+}
+		
+function selectGrating(value) {
+	currentGrating = value;
+	currentGratingData = gratingData[value];
+	
+	document.querySelector("#unvignettedrange").innerText = currentGratingData.unvignetted;
+	document.querySelector("#vignettedrange").innerText = currentGratingData.vignetted;
+	document.querySelector("#wavelengthslider").value = currentGratingData.blaze;
+	document.querySelector("#wavelengthslider").min = currentGratingData.blaze - currentGratingData.vignetted;
+	document.querySelector("#wavelengthslider").max = currentGratingData.blaze + currentGratingData.vignetted;
+	
+	document.querySelector("#cenwave").innerText = currentGratingData.blaze;
+	document.querySelector("#blaze").innerText = currentGratingData.blaze;
+	console.log(currentGratingData.blaze);
+}	
+</script>
+
+<h1>ISIS grating calculator</h1>
+	<table border="1">
+		<tr>
+			<th>
+				<select name="grating" onchange="selectGrating(this.value)"> 
+					<option value="R600B">R600B</option>
+					<option value="R1200B">R1200B</option>
+				</select>
+			</th>
+			<td><span id="blaze"></span>
+		</tr>
+		<tr>
+			<th>Unvignetted range</th><th>50% vignetted range</th>
+		</tr>
+		<tr>
+			<td><span id="unvignettedrange"> </span> &#8491;</td>
+			<td><span id="vignettedrange"> </span> &#8491;</td>
+		</tr>
+		<tr>
+			<td><span id="unvignettedstart"> </span> to <span id="unvignettedend"> </span> &#8491;</td>
+			<td><span id="vignettedstart"> </span> to <span id="vignettedend"> </span> &#8491;</td>
+		</tr>
+	<table>
+	<label for="wavelengthslider">Cenwave</label><input type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(value)"><output for="wavelengthslider" id="cenwave">--</output>&#8491;
+
+</body>
+
+<html>
