@@ -67,9 +67,9 @@
 	    var xmlHttp = new XMLHttpRequest();
 	    xmlHttp.onreadystatechange = function() { 
 	        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-	            postCompleted(xmlHttp.responseText);
+	            postCompleted(xmlHttp.responseText, xmlHttp.status);
 	        if (xmlHttp.readyState == 4 && xmlHttp.status != 200)
-	        	httpFailed(xmlHttp.responseText)
+	        	httpFailed(xmlHttp.responseText, xmlHttp.status)
 	    }
 	    xmlHttp.open("POST", theUrl, true); // true for asynchronous 
 		xmlHttp.setRequestHeader('Authorization', "Bearer " + token)
@@ -85,8 +85,8 @@
 		drawBulbsTable(bulbsData);
 	}
 	
-	function httpFailed(responseText) {
-		console.log("HTTP failed...");
+	function httpFailed(responseText, responseStatus) {
+		console.log("HTTP failed... with status code: " + responseStatus);
 		console.log(responseText);
 		
 	}
