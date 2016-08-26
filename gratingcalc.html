@@ -72,7 +72,16 @@ function writeGratingList() {
 		addCell(tableRow, gratingData[g].unvignetted);
 		addCell(tableRow, gratingData[g].vignetted);
 		
-		addCell(tableRow, gratingData[g].cenwave);
+		cenwaveCell = addCell(tableRow, gratingData[g].cenwave);
+		inputElement = document.createElement("input");
+		inputElement.type='range';
+		inputElement.value = gratingData[g].cenwave;
+		inputElement.min = gratingData[g].blaze - gratingData[g].vignetted;
+		inputElement.max = gratingData[g].blaze + gratingData[g].vignetted;
+		
+		cenwaveCell.appendChild(inputElement);
+		//type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"
+		console.log(inputElement);
 		
 		gratingTableElement.appendChild(tableRow);
 	}
