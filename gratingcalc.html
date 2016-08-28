@@ -17,13 +17,27 @@ var gratingData = {
 	"R1200B": 
 		{'blaze': 4000, 'total': 940, 'unvignetted':646, 'vignetted':842, 'dispersion': 0.23, 'slitwidth': 1.08, 'resolution':0.85, 'cenwave': 4000}
 };
+
+var linesData = {
+	"Balmer":   [ { 'wavelength':6563, 'name': 'Ha', 'colour': '#ff0000' }, 
+	              { 'wavelength':4861, 'name': 'Hb', 'colour': '#ff0000' }, 
+	              { 'wavelength':4341, 'name': 'Hg', 'colour': '#ff0000' }, 
+	              { 'wavelength':4102, 'name': 'Hd', 'colour': '#ff0000' }, 
+			   	  { 'wavelength':3970, 'name': 'He', 'colour': '#ff0000' }  ], 
+
+	"Sodium8190":   [ { 'wavelength':8183, 'name': 'NaI'}, 
+	                  { 'wavelength':8194, 'name': 'NaI'} ]
+	
+};
 	
 var wavelengthCanvas = null;
 var width, height;
 var wavelengthMin = 3000;
-var wavelengthMax = 10000;
+var wavelengthMax = 9000;
 var plotborderHeight = 20;
 var plotborderWidth = 30;
+var context;
+var gratingContext;
 
 function eventWindowLoaded() {
 	currentGrating = "R600B";
@@ -31,21 +45,53 @@ function eventWindowLoaded() {
 	selectGrating(currentGrating);
 	initCanvas();
 	drawWavelengthRange();
+	plotLines("Balmer");
+	plotLines("Sodium8190");
 	plotGrating("R600B");
 }
 
+function drawLine(x1, y1, x2, y2, colour) {
+	context.lineWidth="1";
+	context.strokeStyle = colour;
+	context.beginPath();
+	plotPosition = { 'x': x1, 'y': y1 };
+	pixelPosition = getPixel(plotPosition);
+	context.moveTo(pixelPosition.x, pixelPosition.y);
+	plotPosition = { 'x': x2, 'y': y2 };
+	pixelPosition = getPixel(plotPosition);
+	context.lineTo(pixelPosition.x, pixelPosition.y);
+	context.stroke();	
+}
+
+function plotLines(name) {
+	console.log(linesData[name]);
+	lines = linesData[name];
+	
+	for (l in lines) {
+		console.log(lines[l]);
+		context.lineWidth="1";
+		if (lines[l].colour!=null) colour = lines[l].colour; else colour = '#000000';
+		drawLine(lines[l].wavelength, 'top', lines[l].wavelength, 'bottom', colour);
+		
+	}
+}
+
 function getPixel(plotPosition) {
-	canvasPosition.x = 0;
-	canvasPosition.y = 0;
+	var canvasPosition = {};
+	xStart = plotborderWidth;
+	xEnd = width - plotborderWidth;
+	pixelRange = xEnd - xStart;
+	wavelengthRange = wavelengthMax - wavelengthMin;
+	scale = pixelRange/wavelengthRange;
+	canvasPosition.x = (plotPosition.x - wavelengthMin) * scale + plotborderWidth;
+	if (plotPosition.y=='top') canvasPosition.y = plotborderHeight;
+	if (plotPosition.y=='bottom') canvasPosition.y = height - plotborderHeight;
+	console.log(canvasPosition);
 	return canvasPosition;
 }
 
 function updateGratingProperties(name, cenwave) {
 	gratingData[name].cenwave = cenwave;
-	gratingData[name].vigBlue = cenwave - (gratingData[name].vignetted/2);
-	gratingData[name].vigRed = cenwave + (gratingData[name].vignetted/2);
-	gratingData[name].unvigBlue = cenwave - (gratingData[name].unvignetted/2);
-	gratingData[name].unvigRed = cenwave + (gratingData[name].unvignetted/2);	
 }
 
 function addCell(row, data) {
@@ -58,7 +104,6 @@ function addCell(row, data) {
 	
 
 function writeGratingList() {
-	
 	// get the 'root' element containing the table	
 	gratingTableElement = document.getElementById("gratingTable");
 	
@@ -75,9 +120,11 @@ function writeGratingList() {
 		cenwaveCell = addCell(tableRow, gratingData[g].cenwave);
 		inputElement = document.createElement("input");
 		inputElement.type='range';
-		inputElement.value = gratingData[g].cenwave;
+		inputElement.setAttribute("value", gratingData[g].cenwave);
 		inputElement.min = gratingData[g].blaze - gratingData[g].vignetted;
 		inputElement.max = gratingData[g].blaze + gratingData[g].vignetted;
+		inputElement.id = "slider" + g.toString();
+		inputElement.setAttribute("oninput", "testDrag(this)");
 		
 		cenwaveCell.appendChild(inputElement);
 		//type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"
@@ -87,15 +134,41 @@ function writeGratingList() {
 	}
 }
 
+function testDrag(element) {
+	gratingName = element.id.substring(6);
+	cenwave = element.value;
+	console.log("Test drag: " + gratingName + " cenwave: " + cenwave);
+	updateGratingProperties(element.id.substring(6), cenwave);
+	plotGrating(gratingName);
+}
+
 
 function plotGrating(name) {
+	gratingContext.fillStyle = "#aaaaaa";
+	gratingContext.fillRect(0, 0, width, height);
+	gratingContext.fillStyle = "#000000";	
+	
+	console.log("Just cleared the canvas");	
 	var gratingInfo = gratingData[name];
-	console.log("About to plot grating...");
+	console.log("About to plot grating..." + name);
 	console.log(gratingInfo);	
 	
-	xLeft = gratingInfo.uvstart;
 	//context.strokeRect(plotborderWidth, plotborderHeight, plotWidth, plotHeight);
-	console.log(xLeft);
+	cenwave = gratingInfo.cenwave;
+	xLower = parseInt(cenwave) - parseInt(gratingInfo.vignetted)/2; 
+	xUpper = parseInt(cenwave) + parseInt(gratingInfo.vignetted)/2;
+	console.log("Cenwave: " + cenwave + " -- " + xLower + " " + xUpper);
+	
+	lowerLeft = { 'x': xLower, 'y': 'top' };
+	startPixel = getPixel(lowerLeft);
+	topRight = {'x': xUpper, 'y': 'bottom'};
+	endPixel = getPixel(topRight);
+	console.log(startPixel, endPixel);
+	xSize = endPixel.x - startPixel.x;
+	ySize = Math.abs(startPixel.y - endPixel.y);
+	gratingContext.fillStyle ='#aaaacc';
+	gratingContext.fillRect(startPixel.x, startPixel.y, xSize, ySize);
+	gratingContext.stroke();
 }
 
 function clearCanvas() {
@@ -130,6 +203,9 @@ function drawWavelengthRange() {
 function initCanvas() {		
 	wavelengthCanvas = document.getElementById("wavelengthWindow");
 	context = wavelengthCanvas.getContext("2d");
+	
+	gratingCanvas = document.getElementById("gratingPlot");
+	gratingContext = gratingCanvas.getContext("2d");
 		
 	width = wavelengthCanvas.width;
 	height = wavelengthCanvas.height;
@@ -139,7 +215,7 @@ function initCanvas() {
    	pix[3] = 255; // alpha channel
    	
    	clearCanvas();
-	}
+}
 
 
 function dragWavelength(element) {
@@ -161,14 +237,7 @@ function selectGrating(value) {
 	currentGrating = value;
 	currentGratingData = gratingData[value];
 	
-	document.querySelector("#unvignettedrange").innerText = currentGratingData.unvignetted;
-	document.querySelector("#vignettedrange").innerText = currentGratingData.vignetted;
-	document.querySelector("#wavelengthslider").value = currentGratingData.blaze;
-	document.querySelector("#wavelengthslider").min = currentGratingData.blaze - currentGratingData.vignetted;
-	document.querySelector("#wavelengthslider").max = currentGratingData.blaze + currentGratingData.vignetted;
 	
-	document.querySelector("#cenwave").innerText = currentGratingData.blaze;
-	document.querySelector("#blaze").innerText = currentGratingData.blaze;
 	console.log(currentGratingData.blaze);
 }	
 </script>
@@ -199,13 +268,17 @@ function selectGrating(value) {
 
 
 
-<!--	<label for="wavelengthslider">Cenwave</label><input type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"><output for="wavelengthslider" id="cenwave">--</output>&#8491;
--->
+	<!-- <label for="wavelengthslider">Cenwave</label><input type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"><output for="wavelengthslider" id="cenwave">--</output>&#8491;
+	-->
 	<div>
-	   	<canvas id="wavelengthWindow" width="600" height="200">
+	   	<canvas id="wavelengthWindow" width="600" height="200" z-index:0;>
+		Fallback content, in case the browser does not support Canvas.
+		</canvas>
+	   	<canvas id="gratingPlot" width="600" height="200" z-index:1  opacity:0.1;>
 		Fallback content, in case the browser does not support Canvas.
 		</canvas>
 	</div>
+	
 </body>
 
 <html>
