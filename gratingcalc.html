@@ -15,8 +15,18 @@ var gratingData = {
 	"R600B": 
 		{'blaze': 3900, 'total': 1825, 'unvignetted':1256, 'vignetted':1636, 'dispersion': 0.45, 'slitwidth': 0.89, 'resolution':2.02, 'cenwave': 3900},
 	"R1200B": 
-		{'blaze': 4000, 'total': 940, 'unvignetted':646, 'vignetted':842, 'dispersion': 0.23, 'slitwidth': 1.08, 'resolution':0.85, 'cenwave': 4000}
+		{'blaze': 4000, 'total': 940, 'unvignetted':646, 'vignetted':842, 'dispersion': 0.23, 'slitwidth': 1.08, 'resolution':0.85, 'cenwave': 4000},
+	"R158R": 
+		{'blaze': 6500, 'total': 7530, 'unvignetted':4412, 'vignetted':6038, 'dispersion': 1.81, 'slitwidth': 0.94, 'resolution':7.70, 'cenwave': 6500},
+	"R316R": 
+		{'blaze': 6500, 'total': 3858, 'unvignetted':2260, 'vignetted':3094, 'dispersion': 0.93, 'slitwidth': 0.98, 'resolution':3.80, 'cenwave': 6500},
+	"R600R": 
+		{'blaze': 7000, 'total': 2054, 'unvignetted':1202, 'vignetted':1646, 'dispersion': 0.49, 'slitwidth': 1.08, 'resolution':1.81,  'cenwave': 7000},
+	"R1200R": 
+		{'blaze': 7200, 'total': 1055, 'unvignetted':618, 'vignetted':846, 'dispersion': 0.26, 'slitwidth': 1.38, 'resolution':0.75,  'cenwave': 7200}
+	
 };
+
 
 var linesData = {
 	"Balmer":   [ { 'wavelength':6563, 'name': 'Ha', 'colour': '#ff0000' }, 
@@ -50,17 +60,17 @@ function eventWindowLoaded() {
 	plotGrating("R600B");
 }
 
-function drawLine(x1, y1, x2, y2, colour) {
-	context.lineWidth="1";
-	context.strokeStyle = colour;
-	context.beginPath();
+function drawLine(ctx, x1, y1, x2, y2, colour) {
+	ctx.lineWidth="1";
+	ctx.strokeStyle = colour;
+	ctx.beginPath();
 	plotPosition = { 'x': x1, 'y': y1 };
 	pixelPosition = getPixel(plotPosition);
-	context.moveTo(pixelPosition.x, pixelPosition.y);
+	ctx.moveTo(pixelPosition.x, pixelPosition.y);
 	plotPosition = { 'x': x2, 'y': y2 };
 	pixelPosition = getPixel(plotPosition);
-	context.lineTo(pixelPosition.x, pixelPosition.y);
-	context.stroke();	
+	ctx.lineTo(pixelPosition.x, pixelPosition.y);
+	ctx.stroke();	
 }
 
 function plotLines(name) {
@@ -71,7 +81,7 @@ function plotLines(name) {
 		console.log(lines[l]);
 		context.lineWidth="1";
 		if (lines[l].colour!=null) colour = lines[l].colour; else colour = '#000000';
-		drawLine(lines[l].wavelength, 'top', lines[l].wavelength, 'bottom', colour);
+		drawLine(context, lines[l].wavelength, 'top', lines[l].wavelength, 'bottom', colour);
 		
 	}
 }
@@ -177,6 +187,10 @@ function plotGrating(name) {
 	gratingContext.fillStyle ='#aaaacc';
 	gratingContext.fillRect(startPixel.x, startPixel.y, xSize, ySize);
 	gratingContext.stroke();
+	
+	gratingContext.setLineDash([5]);
+	colour = "#000000";
+	drawLine(gratingContext, gratingInfo.blaze, 'top', gratingInfo.blaze, 'bottom', colour);
 }
 
 function clearCanvas() {
