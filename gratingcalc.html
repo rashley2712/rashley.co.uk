@@ -117,7 +117,7 @@ function writeGratingList() {
 		addCell(tableRow, gratingData[g].unvignetted);
 		addCell(tableRow, gratingData[g].vignetted);
 		
-		cenwaveCell = addCell(tableRow, gratingData[g].cenwave);
+		cenwaveCell = addCell(tableRow, "");
 		inputElement = document.createElement("input");
 		inputElement.type='range';
 		inputElement.setAttribute("value", gratingData[g].cenwave);
@@ -126,7 +126,12 @@ function writeGratingList() {
 		inputElement.id = "slider" + g.toString();
 		inputElement.setAttribute("oninput", "testDrag(this)");
 		
+		labelElement = document.createElement("output");
+		labelElement.setAttribute("for", "slider" + g.toString());
+		labelElement.setAttribute("id", "output" + g.toString());
+		labelElement.innerText = gratingData[g].cenwave;
 		cenwaveCell.appendChild(inputElement);
+		cenwaveCell.appendChild(labelElement);
 		//type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"
 		console.log(inputElement);
 		
@@ -138,8 +143,11 @@ function testDrag(element) {
 	gratingName = element.id.substring(6);
 	cenwave = element.value;
 	console.log("Test drag: " + gratingName + " cenwave: " + cenwave);
+	textID = "output" + gratingName; 
+	document.getElementById(textID).innerText = cenwave;
 	updateGratingProperties(element.id.substring(6), cenwave);
 	plotGrating(gratingName);
+	
 }
 
 
