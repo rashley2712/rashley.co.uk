@@ -144,7 +144,7 @@ function testDrag(element) {
 
 
 function plotGrating(name) {
-	gratingContext.fillStyle = "#aaaaaa";
+	gratingContext.fillStyle = "#ffffff";
 	gratingContext.fillRect(0, 0, width, height);
 	gratingContext.fillStyle = "#000000";	
 	
@@ -270,11 +270,11 @@ function selectGrating(value) {
 
 	<!-- <label for="wavelengthslider">Cenwave</label><input type="range" id="wavelengthslider" value="3000" min="2000" max="7000" oninput="dragWavelength(this)"><output for="wavelengthslider" id="cenwave">--</output>&#8491;
 	-->
-	<div>
-	   	<canvas id="wavelengthWindow" width="600" height="200" z-index:0;>
+	<div style="position:relative">
+	   	<canvas id="wavelengthWindow" width="600" height="200" style="z-index:0; position: absolute; top:0px; left:0px">
 		Fallback content, in case the browser does not support Canvas.
 		</canvas>
-	   	<canvas id="gratingPlot" width="600" height="200" z-index:1  opacity:0.1;>
+	   	<canvas id="gratingPlot" width="600" height="200" style="z-index:1; opacity:0.5; position: absolute; top:0px; left:0px">
 		Fallback content, in case the browser does not support Canvas.
 		</canvas>
 	</div>
