@@ -21,6 +21,12 @@ tr.active {background-color:#aaeeaa;}
 ul {list-style:circle;}
 ol {list-style:decimal;}
 
+twocolumn {
+    -webkit-column-count: 2; /* Chrome, Safari, Opera */
+    -moz-column-count: 2; /* Firefox */
+    column-count: 2;
+}
+
 /* unvisited link */
 a:link {
     color: #b08d44;

@@ -1,3 +1,13 @@
+function radians(angle) {
+	angle = parseFloat(angle);
+	return angle/180 * Math.PI;
+	}
+
+function degrees(angle) {
+	angle = parseFloat(angle);	
+	return angle * 180 / Math.PI;
+	}
+
 function formatUTCTime(date) {
 	var hours;
 	var minutes;
@@ -74,3 +84,80 @@ function GM_Sidereal_Time(jd) {
 function LM_Sidereal_Time(jd, longitude) {
    return 24.0*frac((GM_Sidereal_Time(jd) + longitude/15.0)/24.0);
 }
+
+function fromSexagesimalString(radecStr) {
+	// Returns an object with properties 'ra' and 'dec' in degrees separated by a comma or "null, null if it could not parse the input correctly 
+	// Results are truncated to 4 figures after the decimal (1E-4 degrees)
+	// Format for input ra and dec are 'HH:MM:SS.dd' and 'nDD:MM:SS.dd' or HH MM SS.dd and nDD MM SS.dd 
+	                                                                               
+	var separator = ':';
+	if (radecStr.indexOf(separator)==-1) { 
+		separator = ' '; 
+		radecPieces = radecStr.split(separator);
+	} else {
+		raPart = radecStr.split(' ')[0];
+		radecPieces = raPart.split(separator);
+		decPart = radecStr.split(' ')[1];
+		decPieces = decPart.split(':');
+		radecPieces = radecPieces.concat(decPieces);
+	}
+	if (radecPieces.length < 6) {
+		console.log("Could not sensibly parse the line: " + radecStr);
+		return "null, null";
+	}
+	raHours = parseInt(radecPieces[0]);
+	raMinutes = parseInt(radecPieces[1]);
+	raSeconds = parseFloat(radecPieces[2]);
+	ra = 15 * (raHours + raMinutes/60.0 + raSeconds / 3600.0);
+		
+	if (radecPieces[3][0]=='-') south = true; else south = false;
+		
+	decDegrees = parseInt(radecPieces[3]);
+	decMinutes = parseInt(radecPieces[4]);
+	decSeconds = parseFloat(radecPieces[5]);
+	
+	if (south) dec = decDegrees - decMinutes/60.0 - decSeconds / 3600.0;
+	else dec = decDegrees + decMinutes/60.0 + decSeconds / 3600.0;
+		
+	ra = decimalPlacesFloat(ra, 4);
+	dec = decimalPlacesFloat(dec, 4);
+	
+	result = {};
+	result.ra = ra
+	result.dec = dec		
+	return result;
+}
+
+function convertToGalactic(ra, dec) {
+	// Returns a string of l, b in degrees separated by a comm 
+	// Results are truncated to 4 figures after the decimal (1E-4 degrees)
+	// Format for input ra and dec are 'HH:MM:SS.dd' and 'nDD:MM:SS.dd' or HH MM SS.dd and nDD MM SS.dd 
+	// Information for the transformation found here: http://physics.stackexchange.com/questions/88663/converting-between-galactic-and-ecliptic-coordinates
+	console.log("Converting to galactic coordinates:" + ra + ", " + dec);
+	pole = radians(192.859481);
+	node = radians(27.128251);
+	equator = radians(32.931918);
+	alpha = radians(ra);
+	delta = radians(dec);
+	console.log('alpha, delta', alpha, delta);
+	b = Math.asin( Math.cos(delta)*Math.cos(node)*Math.cos(alpha-pole) + Math.sin(delta)*Math.sin(node) );
+	numerator = Math.sin(delta) - Math.sin(b)*Math.sin(node);
+	denominator = Math.cos(delta)*Math.cos(node)*Math.sin(alpha-pole);
+	console.log("fraction:", numerator, denominator);
+	l = Math.atan( numerator/denominator)
+	console.log("atan:", degrees(l));
+	if (numerator<0 && denominator<0) l+= Math.PI;
+	if (numerator<0 && denominator>0) l+= 2*Math.PI;
+	if (numerator>0 && denominator<0) l+= Math.PI;
+	console.log("corrected atan:", degrees(l));
+	l+= equator;
+	if (l > 2*Math.PI) l-= 2*Math.PI;
+	console.log(l, b);
+	l = decimalPlacesFloat(degrees(l), 4);
+	b = decimalPlacesFloat(degrees(b), 4);
+	galactic = { 'l': l, 'b': b};
+	return galactic;
+	
+	}
+
+

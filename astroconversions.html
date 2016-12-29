@@ -26,73 +26,46 @@
 	function convertText() {
 		convertString = $("#positions").val();
 		results = "";
+		galacticResults = "";
 		console.log("Converting:\n" + convertString);
 		lines = convertString.split("\n");
 		for (l in lines) {
 			console.log(l + ": " + lines[l]);
-			results+= fromSexagesimal(lines[l]) + "\n";
+			coordinate = fromSexagesimalString(lines[l]);
+			results+= coordinate.ra + ", " + coordinate.dec + "\n";
+			galactic = convertToGalactic(coordinate.ra, coordinate.dec);
+			galacticResults+= galactic.l + ", " + galactic.b + "\n";
 		}	
-		$("#results").text(results);	
+		$("#equatorial").text(results);	
+		$("#galactic").text(galacticResults);
 	}
 	
 	function addExample() {
-		var example = "20 59 21.82 +44 39 22\n19 34 21 -21 18 32\nfdsdskl slkd slk\n11:23:14 -48:09:06.81";
+		var example = "20 59 21.82 +44 39 22\n19 34 21 -21 18 32\n11:23:14 -48:09:06.81";
+		example = "20 16 47.1 37 10 09\n05 41 44.3 28 24 42\n02 38 25.8 62 20 17";
 		$("#positions").text(example);
 	}
 	
-	function fromSexagesimal(radecStr) {
-	// Format for input ra and dec are 'HH:MM:SS.dd' and 'nDD:MM:SS.dd' or HH MM SS.dd and nDD MM SS.dd 
-	// Returns a string of RA, DEC in degrees separated by a comma or "null, null if it could not parse the input correctly 
-	// Results are truncated to 4 figures after the decimal (1E-4 degrees)
-	                                                                               
-		var separator = ':';
-		console.log("Input string", radecStr);
-		if (radecStr.indexOf(separator)==-1) { 
-			separator = ' '; 
-			radecPieces = radecStr.split(separator);
-		} else {
-			raPart = radecStr.split(' ')[0];
-			radecPieces = raPart.split(separator);
-			decPart = radecStr.split(' ')[1];
-			decPieces = decPart.split(':');
-			radecPieces = radecPieces.concat(decPieces);
-		}
-		console.log(radecPieces);
-		if (radecPieces.length < 6) {
-			console.log("Could not sensibly parse the line: " + radecStr);
-			return "null, null";
-			}
-		raHours = parseInt(radecPieces[0]);
-		raMinutes = parseInt(radecPieces[1]);
-		raSeconds = parseFloat(radecPieces[2]);
-		ra = 15 * (raHours + raMinutes/60.0 + raSeconds / 3600.0);
-		
-		if (radecPieces[3][0]=='-') south = true;
-		else south = false;
-		
-		decDegrees = parseInt(radecPieces[3]);
-		decMinutes = parseInt(radecPieces[4]);
-		decSeconds = parseFloat(radecPieces[5]);
-	
-		if (south) dec = decDegrees - decMinutes/60.0 - decSeconds / 3600.0;
-		else dec = decDegrees + decMinutes/60.0 + decSeconds / 3600.0;
-		
-		console.log(raHours, raMinutes, raSeconds, decDegrees, decMinutes, decSeconds);
-		console.log(ra + ", " + dec);
-			
-		return ra + ", " + dec;
-	}
 </script>	
 	
 
 
 <body>
 <form>
-<textarea id="positions" rows="10" cols="40" onfocus="selectText()" oninput="convertText(this.value)">.</textarea>
+<label for="positions">Input RA, DEC positions</label><br/>
+<textarea id="positions" rows="10" cols="40" onfocus="selectText()" oninput="convertText(this.value)"></textarea>
 <input type="button" value="example" onclick="addExample()"/>
-<label for="positions">Positions</label><br/>
+<br/>
 <input type="button" value="Convert" onclick="convertText()"/><hr/>
-<textarea id="results" rows="10" cols="40">.</textarea>
+
+<table>
+<div class="twocolumn">
+	<label for="equatorial">Equatorial (degrees)</label><br/>
+	<textarea id="equatorial" rows="10" cols="40">....</textarea><br/>
+	<label for="galactic">Galactic (l, b) (degrees)</label><br/>
+	<textarea id="galactic" rows="10" cols="40">....</textarea>
+</div>
+
 </form>
 </body>
 
