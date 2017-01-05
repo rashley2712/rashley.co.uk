@@ -85,36 +85,43 @@ function LM_Sidereal_Time(jd, longitude) {
    return 24.0*frac((GM_Sidereal_Time(jd) + longitude/15.0)/24.0);
 }
 
+function removeEmptyElements(inputArray) {
+	var newArray = [];
+	for (element in inputArray) {
+		if (inputArray[element].length!=0) newArray.push(inputArray[element]); 
+	}
+	console.log(newArray);
+	return newArray;
+}
+
 function fromSexagesimalString(radecStr) {
 	// Returns an object with properties 'ra' and 'dec' in degrees separated by a comma or "null, null if it could not parse the input correctly 
 	// Results are truncated to 4 figures after the decimal (1E-4 degrees)
 	// Format for input ra and dec are 'HH:MM:SS.dd' and 'nDD:MM:SS.dd' or HH MM SS.dd and nDD MM SS.dd 
-	                                                                               
-	var separator = ':';
-	if (radecStr.indexOf(separator)==-1) { 
-		separator = ' '; 
-		radecPieces = radecStr.split(separator);
-	} else {
-		raPart = radecStr.split(' ')[0];
-		radecPieces = raPart.split(separator);
-		decPart = radecStr.split(' ')[1];
-		decPieces = decPart.split(':');
-		radecPieces = radecPieces.concat(decPieces);
-	}
-	if (radecPieces.length < 6) {
+	
+	// First split on tabs
+	radecStr = radecStr.trim();
+	radecStr = radecStr.replace(/:/g, " ");
+	radecStr = radecStr.replace(/\t/g, " ");
+	console.log("input string:", radecStr);
+	radecParts = radecStr.split(' ');
+	radecParts = removeEmptyElements(radecParts);
+	console.log("Parts:", radecParts);	
+
+	if (radecParts.length != 6) {
 		console.log("Could not sensibly parse the line: " + radecStr);
 		return "null, null";
 	}
-	raHours = parseInt(radecPieces[0]);
-	raMinutes = parseInt(radecPieces[1]);
-	raSeconds = parseFloat(radecPieces[2]);
+	raHours = parseInt(radecParts[0]);
+	raMinutes = parseInt(radecParts[1]);
+	raSeconds = parseFloat(radecParts[2]);
 	ra = 15 * (raHours + raMinutes/60.0 + raSeconds / 3600.0);
 		
-	if (radecPieces[3][0]=='-') south = true; else south = false;
+	if (radecParts[3][0]=='-') south = true; else south = false;
 		
-	decDegrees = parseInt(radecPieces[3]);
-	decMinutes = parseInt(radecPieces[4]);
-	decSeconds = parseFloat(radecPieces[5]);
+	decDegrees = parseInt(radecParts[3]);
+	decMinutes = parseInt(radecParts[4]);
+	decSeconds = parseFloat(radecParts[5]);
 	
 	if (south) dec = decDegrees - decMinutes/60.0 - decSeconds / 3600.0;
 	else dec = decDegrees + decMinutes/60.0 + decSeconds / 3600.0;
