@@ -3,9 +3,15 @@
 		<link rel="stylesheet" type="text/css" href="styles.css">
 		<title>rashley.co.uk</title>
 	</head>
-
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
 <script src="ws-client/jquery.min.js"></script>
 <script src="astrotools.js"></script>
+<script language="javascript" type="text/javascript" src="astro.js-master/astro.js"></script>
+<script language="javascript" type="text/javascript" src="astro.js-master/astro.constants.js"></script>
+<script language="javascript" type="text/javascript" src="astro.js-master/astro.dates.js"></script>
+<script language="javascript" type="text/javascript" src="astro.js-master/astro.ephem.js"></script>
+
 
 <script type="text/javascript">
 	// Call my start up method after the page has finished loading
@@ -16,7 +22,17 @@
 	var earth_radius = 6371E3;
 	var degrees_accuracy, decimal_places;
 	var positionKnown = false;
-	
+
+    // As packages may require dependencies that load
+    // asynchronously, we should wait for them
+    astrojs.ready(function(e){
+        console.log("astro.js is ready.");
+        // Get the SI value for the speed of light
+        var jd = astrojs.dates.getJulianDate();
+        console.log("Julian date: ", jd);                  //  print the Julian Date to the console
+        console.log("Sun position: ", astrojs.ephem.sunPos(jd));
+        console.log("Moon position: ", astrojs.ephem.moonPos(jd));
+    });
 	
 	function eventWindowLoaded() {
 		console.log("The page has loaded.");
@@ -42,7 +58,8 @@
 		$('#timeField').text(localTimeString);
 		$('#UTCtimeField').text(formatUTCTime(now));
 		jd = julianDate(now);
-		$('#JDField').text(decimalPlacesString(jd, 6));
+		//$('#JDField').text(decimalPlacesString(jd, 6));
+        $('#JDField').text(decimalPlacesString(astrojs.dates.getJulianDate(), 6));
 		if (positionKnown) {
 			LMSiderealTime = LM_Sidereal_Time(jd, roundedLongitude);
 			$('#LSTField').text(timeDecimalToHMS(LMSiderealTime));
@@ -196,4 +213,6 @@
 <div id="mapholder"></div>
 </body>
 
+<hr/>
+<div class="footer">Now incorporating <a href="http://slowe.github.io/astro.js/">astro.js</a> by Stuart Lowe.</div>
 </html>
