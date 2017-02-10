@@ -1,0 +1,122 @@
+<html>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Spheres in 3D using three.js</title>
+	<style>
+		body { margin: 0; }
+		canvas { width: 100%; height: 100% }
+	</style>
+<script src="modernizr.js"></script>
+<script src="jquery191.js"></script>
+<script src="three.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<script type="text/javascript">
+	'use strict';
+	
+	// Set up everything when the page had finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	var scene;
+	var camera;
+	var geometry;
+	var material;
+	var cube;
+	var light;
+	var controls;
+	var cone;
+	var sphereWD;
+	var sphereMS;
+	var ticker;
+	var lights;
+	var renderer;
+	
+	function initModels() {
+		console.log("Initialising models and scene");
+		scene = new THREE.Scene();
+		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 1000 );
+	    
+		// Define the sphere
+		var WDgeometry = new THREE.SphereGeometry( 0.02, 32, 32 );
+		var WDmaterial = new THREE.MeshLambertMaterial( {color: 0x9fbfff, emissive: 0x9fbfff, emmissiveIntensity: 2} );
+		sphereWD = new THREE.Mesh( WDgeometry, WDmaterial );
+		scene.add( sphereWD );
+		var MSgeometry = new THREE.SphereGeometry( 0.149, 32, 32 );
+		var MSmaterial = new THREE.MeshLambertMaterial( {color: 0xffc184, emissive: 0xffc184} );
+		sphereMS = new THREE.Mesh( MSgeometry, MSmaterial );
+		
+		var m1= 0.535;
+		var m2 = 0.111;
+		var a = 0.934;
+		var q = m1/m2;
+		var r2 = q*a/(1+q);
+		var r1 = a - r2;
+		
+		sphereWD.position.x = -r1;
+		sphereMS.position.x = r2;
+		sphereWD.radius = r1;
+		sphereMS.radius = r2;
+		scene.add( sphereMS );
+		
+
+		lights = [];
+					lights[ 0 ] = new THREE.PointLight( 0xffc184, 1, 0 );
+					lights[ 1 ] = new THREE.DirectionalLight( 0xffffff);
+					lights[ 2 ] = new THREE.PointLight( 0x9fbfff, 2, 0 );
+
+					lights[ 0 ].position.set( r2, 0, 0 );
+					lights[ 1 ].position.set( 100, 200, 100 );
+					lights[ 2 ].position.set( -r1, 0, 0 );
+
+					scene.add( lights[ 0 ] );
+					//scene.add( lights[ 1 ] );
+					scene.add( lights[ 2 ] );
+
+	  	
+		
+		camera.position.z = 2;
+		scene.add( camera );
+		
+		// Add OrbitControls so that we can pan around with the mouse.
+	    controls = new THREE.OrbitControls(camera, renderer.domElement);
+	}
+	
+	function eventWindowLoaded() {
+		console.log("Page loaded....");
+		renderer = new THREE.WebGLRenderer();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		document.body.appendChild( renderer.domElement );
+		initModels();
+		ticker = 0;
+		render();
+	}
+	
+	function render() {
+		renderer.render( scene, camera );
+		requestAnimationFrame( render );
+		ticker+= 0.005;
+		
+		sphereWD.position.x = - sphereWD.radius*Math.cos(ticker);
+		sphereWD.position.z = - sphereWD.radius*Math.sin(ticker);
+		lights[2].position.x = - sphereWD.radius*Math.cos(ticker);
+		lights[2].position.z = - sphereWD.radius*Math.sin(ticker);
+		sphereMS.position.x = sphereMS.radius*Math.cos(ticker);
+		sphereMS.position.z = sphereMS.radius*Math.sin(ticker);
+		lights[0].position.x = - sphereMS.radius*Math.cos(ticker);
+		lights[0].position.z = - sphereMS.radius*Math.sin(ticker);
+		
+		//console.log(sphereWD.radius);
+	}
+</script>
+</head>
+
+	<body>
+	
+		
+	
+	</body>
+
+
+
+</html>
