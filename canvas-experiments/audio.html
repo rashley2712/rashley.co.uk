@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+	<head>
+		<meta content="utf-8" http-equiv="encoding">
+		<link rel="stylesheet" type="text/css" href="styles.css">
+		<title>HTML5 examples</title>
+	</head>
+	<body>
+	<script src="three.js"></script>
+	<script src="AudioAnalyser.js"></script>
+	<script src="Plane.js"></script>
+	<script src="Sandbox.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+		
+
+
+	<script>
+
+	var analyser = new AudioAnalyser({
+	    src: 'victory.mp3',
+	    bufferWidth: 256
+	});
+	
+	var sandbox = new Sandbox();
+	
+	var plane = new Plane({
+	    width: 128,
+	    length: 100
+	});
+	plane.mesh.position.set(-35, 0, 35);
+	sandbox.add(plane.mesh);
+	function visloop(){
+	    requestAnimationFrame(visloop);
+	    var freqData = analyser.getFrequencyData();
+	    plane.setFirstRow(freqData);
+	    plane.smear();
+	    //sandbox.rotateCamera();
+	    sandbox.render();
+		//console.log(freqData);
+	}
+	requestAnimationFrame(visloop);
+	document.body.appendChild(sandbox.getEl());
+	// Add OrbitControls so that we can pan around with the mouse.
+    controls = new THREE.OrbitControls(sandbox.camera, sandbox.getEl());
+	
+	</script>
+		<h1>WebGL audio visualiser</h1>
+		
+		
+	</body>
+
+
+</html>
+
+			
