@@ -52,7 +52,7 @@
 		sphereMS = new THREE.Mesh( MSgeometry, MSmaterial );
 		
 		var discGeometry = new THREE.RingGeometry( 0.03, 0.18, 32 );
-		var discMaterial = new THREE.MeshBasicMaterial( { color: 0xe3e9ff , side: THREE.DoubleSide } );
+		var discMaterial = new THREE.MeshBasicMaterial( { color: 0xe3e9ff , side: THREE.DoubleSide, emissive: 0x9fbfff, emmissiveIntensity: 2} );
 		disc = new THREE.Mesh( discGeometry, discMaterial );
 		//scene.add( disc );
 		
@@ -68,7 +68,7 @@
 			points.push( new THREE.Vector2( Math.sin( angle ) * width + offset, Math.cos (angle) * thickness ) );
 		}
 		var latheGeometry = new THREE.LatheGeometry( points, 32 );
-		var latheMaterial = new THREE.MeshLambertMaterial( { color: 0xe3e9ff, side: THREE.DoubleSide } );
+		var latheMaterial = new THREE.MeshLambertMaterial( { color: 0xe3e9ff, side: THREE.DoubleSide,} );
 		lathe = new THREE.Mesh( latheGeometry, latheMaterial );
 		scene.add( lathe );
 		
@@ -123,9 +123,6 @@
 	}
 	
 	function render() {
-		renderer.render( scene, camera );
-		requestAnimationFrame( render );
-		ticker+= 0.005;
 		
 		sphereWD.position.x = - sphereWD.radius*Math.cos(ticker);
 		sphereWD.position.z = - sphereWD.radius*Math.sin(ticker);
@@ -136,10 +133,13 @@
 		sphereMS.position.x = sphereMS.radius*Math.cos(ticker);
 		sphereMS.position.z = sphereMS.radius*Math.sin(ticker);
 		sphereMS.rotation.y = - ticker;
-		lights[0].position.x = - sphereMS.radius*Math.cos(ticker);
-		lights[0].position.z = - sphereMS.radius*Math.sin(ticker);
+		lights[0].position.x = sphereMS.radius*Math.cos(ticker);
+		lights[0].position.z = sphereMS.radius*Math.sin(ticker);
+		camera.rotation.z = ticker;
+		renderer.render( scene, camera );
+		ticker+= 0.004;
+		requestAnimationFrame( render );
 		
-		//console.log(sphereWD.radius);
 	}
 </script>
 </head>

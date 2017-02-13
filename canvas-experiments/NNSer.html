@@ -1,0 +1,196 @@
+<html>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<head>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+	<title>Spheres in 3D using three.js</title>
+	<style>
+		body { margin: 0; }
+		canvas { width: 100%; height: 100% }
+	</style>
+<script src="modernizr.js"></script>
+<script src="jquery191.js"></script>
+<script src="three.js"></script>
+<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<script type="text/javascript">
+	'use strict';
+	
+	function body(options) {
+		this.radius = options.radius;
+		this.colour = options.colour;
+		this.geometry = new THREE.SphereGeometry( this.radius, 32, 32 );
+		this.material = new THREE.MeshLambertMaterial( {
+								color: this.colour, 
+								emissive: this.colour, 
+								emissiveIntensity: 1
+								});
+		this.object = new THREE.Mesh(this.geometry, this.material);
+		
+		// Automatically create a light at the centre of this body
+		this.light = new THREE.PointLight( this.colour, 1, 0 );
+		console.log("Creating new body: colour: " + this.colour + " radius: " + this.radius);
+	}
+	
+	body.prototype.addTexture = function addTexture(url){
+	    this.texture = new THREE.TextureLoader().load(url);
+		this.material.map = this.texture;
+		this.material.emissiveMap = this.texture;
+		this.material.emissiveIntensity = 0.3;
+	}
+	
+	body.prototype.setPosition = function setPosition(x, y, z) {
+		this.object.position.x = x;
+		this.object.position.y = y;
+		this.object.position.z = z;
+		this.light.position.x = x;
+		this.light.position.y = y;
+		this.light.position.z = z;
+	}
+	
+	body.prototype.setIntensity = function setIntenisty(i) {
+		this.material.emissiveIntensity = i;
+		this.light.intensity = i;
+	}
+	
+	body.prototype.addToScene = function addToScene(scene) {
+		scene.add(this.object);
+		scene.add(this.light);
+	}
+	
+	
+	// Set up everything when the page had finished loading
+	window.addEventListener("load", eventWindowLoaded, false);
+	
+	var scene;
+	var camera;
+	var controls;
+	var ticker;
+	var counter = 0;
+	var renderer;
+	var secondary;
+	var primary;
+	var counterElement;
+	var phaseElement;
+	var timeRateElement;
+	var timeStamp;
+	var secondsElapsed = 0;
+	var startTime;
+	var timeRateIndex = 2;
+	var timeRatesAvailable = [1, 10, 20, 50, 100, 1000];
+	var timeRate = timeRatesAvailable[timeRateIndex];
+	
+	var period = 0.13008 * 86400;   // Orbital period in seconds
+	
+	function initModels() {
+		console.log("Initialising models and scene");
+		scene = new THREE.Scene();
+		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 1000 );
+	    
+		// Define the White Dwarf primary
+		primary = new body({ radius: 0.02, colour: 0x9fbfff});
+		primary.setIntensity(5);
+		primary.addToScene(scene);
+		
+		// Define the M-dwarf secondary
+		var secondaryOptions = { radius: 0.149, colour: 0xffc184};
+		secondary = new body(secondaryOptions);
+		secondary.addTexture('solar.gif');
+		secondary.addToScene(scene);
+		
+		
+		var m1= 0.535;
+		var m2 = 0.111;
+		var a = 0.934;
+		var q = m1/m2;
+		var r2 = q*a/(1+q);
+		var r1 = a - r2;
+		
+		primary.setPosition(-r1, 0, 0);
+		secondary.setPosition(r2, 0, 0);
+		primary.semiMajorAxis = r1;
+		secondary.semiMajorAxis = r2;
+		
+		
+		var inclination = 89.2;
+		camera.position.z = 2;
+		camera.position.y = 2 * Math.tan((90-inclination)/180*Math.PI);
+		camera.rotation.x = - (90-inclination)/180*Math.PI;
+		scene.add( camera );
+		
+		// Add OrbitControls so that we can pan around with the mouse.
+	    controls = new THREE.OrbitControls(camera, renderer.domElement);
+	}
+	
+	function eventWindowLoaded() {
+		console.log("Page loaded....");
+		renderer = new THREE.WebGLRenderer();
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		document.body.appendChild( renderer.domElement );
+		initModels();
+		ticker = 0;
+		counterElement = document.getElementById("counterText");
+		phaseElement = document.getElementById("phaseText");
+		timeRateElement = document.getElementById("timerateText");
+		timeRateElement.innerText = timeRate;
+		startTime = new Date().getTime();
+		timeStamp = new Date();
+		render();
+	}
+	
+	function changeTimeRate(up) {
+		if (up==1) {
+			if (timeRateIndex<timeRatesAvailable.length-1) {
+				timeRateIndex++;
+				timeRate = timeRatesAvailable[timeRateIndex];
+			}
+		} else {
+			if (timeRateIndex>0) {
+				timeRateIndex--;
+				timeRate = timeRatesAvailable[timeRateIndex];			
+			}
+			timeRateElement.innerText = timeRate;			
+		}
+		timeRateElement.innerText = timeRate;
+	
+	}
+	
+	function render() {
+		renderer.render( scene, camera );
+		requestAnimationFrame( render );
+		
+		
+		timeStamp = new Date();
+		var currentTime = new Date().getTime();
+		secondsElapsed = timeRate * (currentTime - startTime)/1000;
+		var angle = Math.PI * 2 / period * secondsElapsed;
+		var phase = secondsElapsed/period;
+		
+		var x = secondary.semiMajorAxis*Math.cos(angle);
+		var z = secondary.semiMajorAxis*Math.sin(angle);
+		secondary.setPosition(x, 0, z);
+		secondary.object.rotation.y = - (Math.PI/2 + angle);
+		x = - primary.semiMajorAxis*Math.cos(angle);
+		z = - primary.semiMajorAxis*Math.sin(angle);
+		primary.setPosition(x, 0, z);
+		
+		// camera.position.z = ticker;
+		//console.log(sphereWD.radius);
+		counterElement.innerText = Math.floor(secondsElapsed);
+		phaseElement.innerText = Math.floor(phase*10000) / 10000;
+		counter++;
+	}
+</script>
+</head>
+
+	<body>
+	<p>
+		Timerate: <input type="button" value="<" id="decrease" onclick="changeTimeRate(0)"><span id="timerateText"></span>x<input type="button" value=">" id="increase" onclick="changeTimeRate(1)"><br/>
+		Elapsed time: <span id="counterText"></span> seconds  <br/>
+		Phase: <span id="phaseText"></span>
+	</p>
+	
+	</body>
+
+
+
+</html>
