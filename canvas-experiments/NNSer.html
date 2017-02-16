@@ -31,11 +31,37 @@
 		console.log("Creating new body: colour: " + this.colour + " radius: " + this.radius);
 	}
 	
-	body.prototype.addTexture = function addTexture(url){
-	    this.texture = new THREE.TextureLoader().load(url);
-		this.material.map = this.texture;
-		this.material.emissiveMap = this.texture;
-		this.material.emissiveIntensity = 0.3;
+	function loadedTexture(event) {
+		console.log("Loaded the texture.");
+		console.log(event);
+	}
+	
+	function checkme(input) {
+		console.log("Hello, I am the checkme function.");
+		secondary.material.map = input;
+		secondary.material.emissiveMap = input;
+		secondary.object = new THREE.Mesh(secondary.geometry, secondary.material);
+		scene.add(secondary.object);
+	}
+	
+	body.prototype.updateTexture = function updateTexture(event) {
+		console.log("Texture");
+		console.log(event);
+		
+	}
+	
+	body.prototype.addTexture = function addTexture(url, callback){
+	    var material = this.material;
+		this.texture = new THREE.TextureLoader().load(url, function (texture) {
+			console.log("Internal callback");
+			console.log(texture);
+			callback(texture);
+		});
+		// material.map = this.texture;
+		// material.emissiveMap = this.texture;
+		
+		// material.map.needsUpdate = true;
+		
 	}
 	
 	body.prototype.setPosition = function setPosition(x, y, z) {
@@ -75,12 +101,12 @@
 	var timeStamp;
 	var secondsElapsed = 0;
 	var startTime;
-	var timeRateIndex = 2;
-	var timeRatesAvailable = [1, 10, 20, 50, 100, 1000];
+	var timeRateIndex = 5;
+	var timeRatesAvailable = [1, 10, 20, 50, 100, 200, 500, 1000];
 	var timeRate = timeRatesAvailable[timeRateIndex];
 	
 	var period = 0.13008 * 86400;   // Orbital period in seconds
-	
+	 
 	function initModels() {
 		console.log("Initialising models and scene");
 		scene = new THREE.Scene();
@@ -94,8 +120,8 @@
 		// Define the M-dwarf secondary
 		var secondaryOptions = { radius: 0.149, colour: 0xffc184};
 		secondary = new body(secondaryOptions);
-		secondary.addTexture('solar.gif');
-		secondary.addToScene(scene);
+		secondary.addTexture('solar.gif', checkme);
+		// secondary.addToScene(scene);
 		
 		
 		var m1= 0.535;
@@ -156,7 +182,7 @@
 	
 	function render() {
 		renderer.render( scene, camera );
-		requestAnimationFrame( render );
+		if (counter<1000) requestAnimationFrame( render );
 		
 		
 		timeStamp = new Date();
