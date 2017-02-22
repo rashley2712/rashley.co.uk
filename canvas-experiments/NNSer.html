@@ -3,15 +3,14 @@
 <meta content="utf-8" http-equiv="encoding">
 <head>
 	<link rel="stylesheet" type="text/css" href="styles.css">
-	<title>Spheres in 3D using three.js</title>
+	<title>NN Ser: An eclipsing binary</title>
 	<style>
 		body { margin: 0; }
 		canvas { width: 100%; height: 100% }
 	</style>
-<script src="modernizr.js"></script>
 <script src="jquery191.js"></script>
 <script src="three.js"></script>
-<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+<script src="OrbitControls.js"></script>
 <script type="text/javascript">
 	'use strict';
 	
@@ -98,12 +97,14 @@
 	var counterElement;
 	var phaseElement;
 	var timeRateElement;
+	var timeHoursElement;
 	var timeStamp;
-	var secondsElapsed = 0;
+	var totalSecondsElapsed = 0;
 	var startTime;
-	var timeRateIndex = 5;
+	var timeRateIndex = 3;
 	var timeRatesAvailable = [1, 10, 20, 50, 100, 200, 500, 1000];
 	var timeRate = timeRatesAvailable[timeRateIndex];
+	var angle=0
 	
 	var period = 0.13008 * 86400;   // Orbital period in seconds
 	 
@@ -143,6 +144,21 @@
 		camera.rotation.x = - (90-inclination)/180*Math.PI;
 		scene.add( camera );
 		
+		// Add a couple of lines
+		//create a blue LineBasicMaterial
+		var material = new THREE.LineDashedMaterial({ 
+					color: 0x0000ff,
+					linewidth: 1,
+					scale: 1,
+					dashSize: 0.1,
+					gapSize: 0.1 });
+		var geometry = new THREE.Geometry();
+		geometry.vertices.push(new THREE.Vector3(0, 0, 0));
+		geometry.vertices.push(new THREE.Vector3(0, 0, 10));
+		//geometry.vertices.push(new THREE.Vector3(10, 0, 0));
+		geometry.computeLineDistances();
+		var lineToEarth = new THREE.Line(geometry, material);
+		scene.add(lineToEarth);
 		// Add OrbitControls so that we can pan around with the mouse.
 	    controls = new THREE.OrbitControls(camera, renderer.domElement);
 	}
@@ -157,6 +173,7 @@
 		counterElement = document.getElementById("counterText");
 		phaseElement = document.getElementById("phaseText");
 		timeRateElement = document.getElementById("timerateText");
+		timeHoursElement = document.getElementById("hoursText");
 		timeRateElement.innerText = timeRate;
 		startTime = new Date().getTime();
 		timeStamp = new Date();
@@ -182,15 +199,19 @@
 	
 	function render() {
 		renderer.render( scene, camera );
-		if (counter<1000) requestAnimationFrame( render );
+		//if (counter<1000) 
+		requestAnimationFrame( render );
 		
 		
-		timeStamp = new Date();
 		var currentTime = new Date().getTime();
-		secondsElapsed = timeRate * (currentTime - startTime)/1000;
-		var angle = Math.PI * 2 / period * secondsElapsed;
-		var phase = secondsElapsed/period;
-		
+		var elapsedTime = currentTime - timeStamp;
+		timeStamp = currentTime;
+		var secondsElapsed = timeRate * elapsedTime/1000;
+		totalSecondsElapsed+= secondsElapsed;
+		//console.log("Virtual seconds elapsed", timeRate, secondsElapsed);
+		angle+= Math.PI * 2 / period * secondsElapsed;
+		var phase = (totalSecondsElapsed/period + 0.75) % 1;
+		// console.log("total seconds", totalSecondsElapsed, period, phase);
 		var x = secondary.semiMajorAxis*Math.cos(angle);
 		var z = secondary.semiMajorAxis*Math.sin(angle);
 		secondary.setPosition(x, 0, z);
@@ -201,7 +222,8 @@
 		
 		// camera.position.z = ticker;
 		//console.log(sphereWD.radius);
-		counterElement.innerText = Math.floor(secondsElapsed);
+		counterElement.innerText = Math.floor(totalSecondsElapsed);
+		timeHoursElement.innerText = Math.floor(totalSecondsElapsed/3600*10) / 10;
 		phaseElement.innerText = Math.floor(phase*10000) / 10000;
 		counter++;
 	}
@@ -211,7 +233,7 @@
 	<body>
 	<p>
 		Timerate: <input type="button" value="<" id="decrease" onclick="changeTimeRate(0)"><span id="timerateText"></span>x<input type="button" value=">" id="increase" onclick="changeTimeRate(1)"><br/>
-		Elapsed time: <span id="counterText"></span> seconds  <br/>
+		Elapsed time: <span id="counterText"></span> seconds   (<span id="hoursText"></span> hours)<br/>
 		Phase: <span id="phaseText"></span>
 	</p>
 	
