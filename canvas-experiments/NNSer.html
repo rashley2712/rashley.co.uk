@@ -105,6 +105,7 @@
 	var timeRatesAvailable = [1, 10, 20, 50, 100, 200, 500, 1000];
 	var timeRate = timeRatesAvailable[timeRateIndex];
 	var angle=0
+	var semiMajorAxis;
 	
 	var period = 0.13008 * 86400;   // Orbital period in seconds
 	 
@@ -144,6 +145,8 @@
 		camera.rotation.x = - (90-inclination)/180*Math.PI;
 		scene.add( camera );
 		
+		var toEarth_z = 10;
+		var toEarth_y = 10 * Math.tan((90 - inclination)/180*Math.PI);
 		// Add a couple of lines
 		//create a blue LineBasicMaterial
 		var material = new THREE.LineDashedMaterial({ 
@@ -154,11 +157,43 @@
 					gapSize: 0.1 });
 		var geometry = new THREE.Geometry();
 		geometry.vertices.push(new THREE.Vector3(0, 0, 0));
-		geometry.vertices.push(new THREE.Vector3(0, 0, 10));
-		//geometry.vertices.push(new THREE.Vector3(10, 0, 0));
+		geometry.vertices.push(new THREE.Vector3(0, toEarth_y, toEarth_z));
 		geometry.computeLineDistances();
 		var lineToEarth = new THREE.Line(geometry, material);
+		
+		var whiteLineMaterial = new THREE.LineDashedMaterial({ 
+					color: 0xffffff,
+					linewidth: 1,
+					scale: 1,
+					dashSize: 0.01,
+					gapSize: 0.01 });
+		var orbitLineMaterial = new THREE.LineDashedMaterial({ 
+					color: 0xaaaaaa,
+					linewidth: 1,
+					scale: 1,
+					dashSize: 0.01,
+					gapSize: 0.01 });
+		var axisGeometry = new THREE.Geometry();
+		axisGeometry.vertices.push(new THREE.Vector3(-r1, 0, 0));
+		axisGeometry.vertices.push(new THREE.Vector3(r2, 0, 0));
+		axisGeometry.computeLineDistances();
+		semiMajorAxis = new THREE.Line(axisGeometry, whiteLineMaterial);
+		
+		var wdOrbitGeometry = new THREE.CircleGeometry(r1, 64);
+		wdOrbitGeometry.vertices.shift();
+		wdOrbitGeometry.computeLineDistances();
+		var wdOrbit = new THREE.Line(wdOrbitGeometry, orbitLineMaterial);
+		wdOrbit.rotation.x = Math.PI/2;
+		var mdOrbitGeometry = new THREE.CircleGeometry(r2, 64);
+		mdOrbitGeometry.vertices.shift();
+		mdOrbitGeometry.computeLineDistances();
+		var mdOrbit = new THREE.Line(mdOrbitGeometry, orbitLineMaterial);
+		mdOrbit.rotation.x = Math.PI/2;
+
 		scene.add(lineToEarth);
+		scene.add(semiMajorAxis);
+		scene.add(wdOrbit)
+		scene.add(mdOrbit);
 		// Add OrbitControls so that we can pan around with the mouse.
 	    controls = new THREE.OrbitControls(camera, renderer.domElement);
 	}
@@ -219,7 +254,7 @@
 		x = - primary.semiMajorAxis*Math.cos(angle);
 		z = - primary.semiMajorAxis*Math.sin(angle);
 		primary.setPosition(x, 0, z);
-		
+		semiMajorAxis.rotation.y=-angle;
 		// camera.position.z = ticker;
 		//console.log(sphereWD.radius);
 		counterElement.innerText = Math.floor(totalSecondsElapsed);
