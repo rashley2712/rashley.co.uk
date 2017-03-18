@@ -7,6 +7,15 @@
 	<style>
 		body { margin: 0; }
 		canvas { width: 100%; height: 100% }
+		#info {
+			position: absolute;
+			top: 10px;
+			width: 100%;
+			text-align: center;
+			z-index: 100;
+			display:block;
+			color: #ffffff; 
+			}
 	</style>
 <script src="jquery191.js"></script>
 <script src="three.js"></script>
@@ -106,6 +115,9 @@
 	var timeRate = timeRatesAvailable[timeRateIndex];
 	var angle=0
 	var semiMajorAxis;
+	var orbitsVisible = false;
+	var wdOrbit;
+	var mdOrbit;
 	
 	var period = 0.13008 * 86400;   // Orbital period in seconds
 	 
@@ -182,18 +194,19 @@
 		var wdOrbitGeometry = new THREE.CircleGeometry(r1, 64);
 		wdOrbitGeometry.vertices.shift();
 		wdOrbitGeometry.computeLineDistances();
-		var wdOrbit = new THREE.Line(wdOrbitGeometry, orbitLineMaterial);
+		wdOrbit = new THREE.Line(wdOrbitGeometry, orbitLineMaterial);
 		wdOrbit.rotation.x = Math.PI/2;
 		var mdOrbitGeometry = new THREE.CircleGeometry(r2, 64);
 		mdOrbitGeometry.vertices.shift();
 		mdOrbitGeometry.computeLineDistances();
-		var mdOrbit = new THREE.Line(mdOrbitGeometry, orbitLineMaterial);
+		mdOrbit = new THREE.Line(mdOrbitGeometry, orbitLineMaterial);
 		mdOrbit.rotation.x = Math.PI/2;
 
 		scene.add(lineToEarth);
 		scene.add(semiMajorAxis);
-		scene.add(wdOrbit)
+		scene.add(wdOrbit);
 		scene.add(mdOrbit);
+		orbitsVisible = true;
 		// Add OrbitControls so that we can pan around with the mouse.
 	    controls = new THREE.OrbitControls(camera, renderer.domElement);
 	}
@@ -213,6 +226,20 @@
 		startTime = new Date().getTime();
 		timeStamp = new Date();
 		render();
+	}
+	
+	function toggleOrbits() {
+		if (orbitsVisible) {
+			wdOrbit.visible = false;
+			mdOrbit.visible = false;
+			orbitsVisible = false;
+		} else {
+			wdOrbit.visible = true;
+			mdOrbit.visible = true;
+			orbitsVisible = true;
+			
+		}
+			
 	}
 	
 	function changeTimeRate(up) {
@@ -266,12 +293,11 @@
 </head>
 
 	<body>
-	<p>
-		Timerate: <input type="button" value="<" id="decrease" onclick="changeTimeRate(0)"><span id="timerateText"></span>x<input type="button" value=">" id="increase" onclick="changeTimeRate(1)"><br/>
-		Elapsed time: <span id="counterText"></span> seconds   (<span id="hoursText"></span> hours)<br/>
-		Phase: <span id="phaseText"></span>
-	</p>
-	
+		<div id="info">
+			Timerate: <input type="button" value="<" id="decrease" onclick="changeTimeRate(0)"><span id="timerateText"></span>x<input type="button" value=">" id="increase" onclick="changeTimeRate(1)">
+			<input id="orbitToggle" type="checkbox" onclick="toggleOrbits()"><label for="orbitToggle">Show orbits</label><br/>
+			Elapsed time: <span id="counterText"></span> seconds   (<span id="hoursText"></span> hours)<br/>
+			Phase: <span id="phaseText"></span></div>
 	</body>
 
 
