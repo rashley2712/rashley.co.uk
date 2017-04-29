@@ -18,8 +18,8 @@
 			}
 	</style>
 <script src="jquery191.js"></script>
-<script src="three.js"></script>
-<script src="OrbitControls.js"></script>
+<script src="/three.js-master/build/three.js"></script>
+<script src="/three.js-master/OrbitControls.js"></script>
 <script type="text/javascript">
 	'use strict';
 	
@@ -118,6 +118,10 @@
 	var orbitsVisible = false;
 	var wdOrbit;
 	var mdOrbit;
+	var lineToEarth;
+	var effectBloom;
+	var effectFilm;
+    var composer;
 	
 	var period = 0.13008 * 86400;   // Orbital period in seconds
 	 
@@ -171,7 +175,7 @@
 		geometry.vertices.push(new THREE.Vector3(0, 0, 0));
 		geometry.vertices.push(new THREE.Vector3(0, toEarth_y, toEarth_z));
 		geometry.computeLineDistances();
-		var lineToEarth = new THREE.Line(geometry, material);
+		lineToEarth = new THREE.Line(geometry, material);
 		
 		var whiteLineMaterial = new THREE.LineDashedMaterial({ 
 					color: 0xffffff,
@@ -209,11 +213,20 @@
 		orbitsVisible = true;
 		// Add OrbitControls so that we can pan around with the mouse.
 	    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+
+		effectBloom = new THREE.BloomPass( 1.25 );
+		effectFilm = new THREE.FilmPass( 0.35, 0.95, 2048, false );
+		effectFilm.renderToScreen = true;
+		composer = new THREE.EffectComposer( renderer );
+		composer.addPass( renderModel );
+		composer.addPass( effectBloom );
+		composer.addPass( effectFilm );
 	}
 	
 	function eventWindowLoaded() {
 		console.log("Page loaded....");
-		renderer = new THREE.WebGLRenderer();
+		renderer = new THREE.WebGLRenderer({antialias: true});
 		renderer.setSize( window.innerWidth, window.innerHeight );
 		document.body.appendChild( renderer.domElement );
 		initModels();
@@ -228,14 +241,18 @@
 		render();
 	}
 	
-	function toggleOrbits() {
+	function toggleGeometry() {
 		if (orbitsVisible) {
 			wdOrbit.visible = false;
 			mdOrbit.visible = false;
+			lineToEarth.visible = false;
+			semiMajorAxis.visible = false;
 			orbitsVisible = false;
 		} else {
 			wdOrbit.visible = true;
 			mdOrbit.visible = true;
+			lineToEarth.visible = true;
+			semiMajorAxis.visible = true;
 			orbitsVisible = true;
 			
 		}
@@ -295,7 +312,7 @@
 	<body>
 		<div id="info">
 			Timerate: <input type="button" value="<" id="decrease" onclick="changeTimeRate(0)"><span id="timerateText"></span>x<input type="button" value=">" id="increase" onclick="changeTimeRate(1)">
-			<input id="orbitToggle" type="checkbox" onclick="toggleOrbits()"><label for="orbitToggle">Show orbits</label><br/>
+			<input id="geometryToggle" type="checkbox" onclick="toggleGeometry()" checked><label for="geometryToggle">Show geometry</label><br/>
 			Elapsed time: <span id="counterText"></span> seconds   (<span id="hoursText"></span> hours)<br/>
 			Phase: <span id="phaseText"></span></div>
 	</body>
