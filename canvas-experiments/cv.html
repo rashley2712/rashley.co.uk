@@ -34,6 +34,8 @@
 	var lights;
 	var renderer;
 	
+	
+	
 	function initModels() {
 		console.log("Initialising models and scene");
 		scene = new THREE.Scene();
@@ -43,14 +45,39 @@
 		var WDgeometry = new THREE.SphereGeometry( 0.02, 32, 32 );
 		var WDmaterial = new THREE.MeshLambertMaterial( {color: 0x9fbfff, emissive: 0x9fbfff, emmissiveIntensity: 2} );
 		sphereWD = new THREE.Mesh( WDgeometry, WDmaterial );
+		console.log(sphereWD.geometry.vertices);
+			
 		scene.add( sphereWD );
+		
 		var MSgeometry = new THREE.SphereGeometry( 0.149, 32, 32 );
 		var MSmaterial = new THREE.MeshLambertMaterial( {
 						color: 0xffc184, 
 						emissive: 0xffc184, 
 						map: THREE.ImageUtils.loadTexture('solar.gif',THREE.SphericalRefractionMapping)} );
 		sphereMS = new THREE.Mesh( MSgeometry, MSmaterial );
-		
+		for (i in sphereMS.geometry.vertices) {
+			//console.log(sphereMS.geometry.vertices[i])
+			var x = sphereMS.geometry.vertices[i].x;
+			var y = sphereMS.geometry.vertices[i].y;
+			var z = sphereMS.geometry.vertices[i].z;
+			var r = Math.sqrt(x*x + y*y + z*z);
+			var theta = Math.acos(z/r);
+			var phi = Math.atan(y/x);
+			if (x<0 && y>0) phi+=Math.PI;
+			if (y<0 && x<0) phi+=Math.PI; 
+			//console.log(r, theta, phi);
+			console.log(phi);
+			r = r + .02*Math.sin(4*phi);
+			x = r * Math.sin(theta) * Math.cos(phi);
+			y = r * Math.sin(theta) * Math.sin(phi);
+			z = r * Math.cos(theta);
+			sphereMS.geometry.vertices[i].x = x;
+			sphereMS.geometry.vertices[i].y = y;
+			sphereMS.geometry.vertices[i].z = z;
+			
+		}
+		sphereMS.geometry.verticesNeedUpdate = true;
+	
 		var discGeometry = new THREE.RingGeometry( 0.03, 0.18, 32 );
 		var discMaterial = new THREE.MeshBasicMaterial( { color: 0xe3e9ff , side: THREE.DoubleSide, emissive: 0x9fbfff, emmissiveIntensity: 2} );
 		disc = new THREE.Mesh( discGeometry, discMaterial );
@@ -114,7 +141,7 @@
 	
 	function eventWindowLoaded() {
 		console.log("Page loaded....");
-		renderer = new THREE.WebGLRenderer();
+		renderer = new THREE.WebGLRenderer({ antialias: true});
 		renderer.setSize( window.innerWidth, window.innerHeight );
 		document.body.appendChild( renderer.domElement );
 		initModels();
@@ -135,11 +162,38 @@
 		sphereMS.rotation.y = - ticker;
 		lights[0].position.x = sphereMS.radius*Math.cos(ticker);
 		lights[0].position.z = sphereMS.radius*Math.sin(ticker);
-		camera.rotation.z = ticker;
+		distortSphere(ticker * 40);
+		// camera.rotation.z = ticker;
 		renderer.render( scene, camera );
 		ticker+= 0.004;
 		requestAnimationFrame( render );
 		
+	}
+	
+	function distortSphere(offset) {
+		for (var i in sphereMS.geometry.vertices) {
+			//console.log(sphereMS.geometry.vertices[i])
+			var x = sphereMS.geometry.vertices[i].x;
+			var y = sphereMS.geometry.vertices[i].y;
+			var z = sphereMS.geometry.vertices[i].z;
+			var r = Math.sqrt(x*x + y*y + z*z);
+			var theta = Math.acos(z/r);
+			var phi = Math.atan(y/x);
+			if (x<0 && y>0) phi+=Math.PI;
+			if (y<0 && x<0) phi+=Math.PI; 
+			//console.log(r, theta, phi);
+			console.log(phi);
+			r = 0.149 + .01 * Math.sin(4*phi + offset);
+			x = r * Math.sin(theta) * Math.cos(phi);
+			y = r * Math.sin(theta) * Math.sin(phi);
+			z = r * Math.cos(theta);
+			sphereMS.geometry.vertices[i].x = x;
+			sphereMS.geometry.vertices[i].y = y;
+			sphereMS.geometry.vertices[i].z = z;
+			
+		}
+		sphereMS.geometry.verticesNeedUpdate = true;
+	
 	}
 </script>
 </head>
