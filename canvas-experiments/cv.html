@@ -41,6 +41,16 @@
 		scene = new THREE.Scene();
 		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 1000 );
 	    
+		var m1= 0.535;
+		var m2 = 0.111;
+		var a = 0.934;
+		var q = m2/m1;
+		var r1 = q*a/(1+q);
+		var r2 = a - r1;
+		var roche = a / (1.0015 + q^(0.4056))
+		var roche2 = a * (0.5 - 0.227 * Math.log(q))
+		var vol_roche_r = a * 0.49 * Math.pow(q,(2/3)) / (0.6 * Math.pow(q, (2/3)) + Math.log(1+ Math.pow(q,(1/3))));
+		console.log("q: " + q + "  roche: " + roche + " " + roche2 + " vol_eq: " + vol_roche_r);
 		// Define the sphere
 		var WDgeometry = new THREE.SphereGeometry( 0.02, 32, 32 );
 		var WDmaterial = new THREE.MeshLambertMaterial( {color: 0x9fbfff, emissive: 0x9fbfff, emmissiveIntensity: 2} );
@@ -49,25 +59,28 @@
 			
 		scene.add( sphereWD );
 		
-		var MSgeometry = new THREE.SphereGeometry( 0.149, 32, 32 );
+		var MSgeometry = new THREE.SphereGeometry( vol_roche_r, 24, 24 );
 		var MSmaterial = new THREE.MeshLambertMaterial( {
 						color: 0xffc184, 
 						emissive: 0xffc184, 
 						map: THREE.ImageUtils.loadTexture('solar.gif',THREE.SphericalRefractionMapping)} );
 		sphereMS = new THREE.Mesh( MSgeometry, MSmaterial );
+		
 		for (i in sphereMS.geometry.vertices) {
-			//console.log(sphereMS.geometry.vertices[i])
 			var x = sphereMS.geometry.vertices[i].x;
 			var y = sphereMS.geometry.vertices[i].y;
 			var z = sphereMS.geometry.vertices[i].z;
 			var r = Math.sqrt(x*x + y*y + z*z);
+			var x1 = x + r2;
+			var x2 = x - r1;
+			var roche1 = Math.sqrt(x1*x1 + y*y + z*z);
+			var roche2 = Math.sqrt(x2*x2 + y*y + z*z);
 			var theta = Math.acos(z/r);
-			var phi = Math.atan(y/x);
-			if (x<0 && y>0) phi+=Math.PI;
-			if (y<0 && x<0) phi+=Math.PI; 
-			//console.log(r, theta, phi);
-			console.log(phi);
-			r = r + .02*Math.sin(4*phi);
+			var phi = Math.atan2(y,x);
+			// r = vol_roche_r + .02 * Math.sin(4*phi) * Math.sin(theta);
+			var potential = 2/(1+q)/roche1 + 2*q/(1+q)/roche  2 + ( x - Math.pow((q/(1+q)),2)) + z*z;
+			r = vol_roche_r - (potential-7.23);
+			console.log(potential);
 			x = r * Math.sin(theta) * Math.cos(phi);
 			y = r * Math.sin(theta) * Math.sin(phi);
 			z = r * Math.cos(theta);
@@ -78,7 +91,7 @@
 		}
 		sphereMS.geometry.verticesNeedUpdate = true;
 	
-		var discGeometry = new THREE.RingGeometry( 0.03, 0.18, 32 );
+		var discGeometry = new THREE.RingGeometry( 0.03, 0.18, 64 );
 		var discMaterial = new THREE.MeshBasicMaterial( { color: 0xe3e9ff , side: THREE.DoubleSide, emissive: 0x9fbfff, emmissiveIntensity: 2} );
 		disc = new THREE.Mesh( discGeometry, discMaterial );
 		//scene.add( disc );
@@ -94,17 +107,11 @@
 			var width = (outerRadius - innerRadius) /2;
 			points.push( new THREE.Vector2( Math.sin( angle ) * width + offset, Math.cos (angle) * thickness ) );
 		}
-		var latheGeometry = new THREE.LatheGeometry( points, 32 );
+		var latheGeometry = new THREE.LatheGeometry( points, 64 );
 		var latheMaterial = new THREE.MeshLambertMaterial( { color: 0xe3e9ff, side: THREE.DoubleSide,} );
 		lathe = new THREE.Mesh( latheGeometry, latheMaterial );
 		scene.add( lathe );
 		
-		var m1= 0.535;
-		var m2 = 0.111;
-		var a = 0.934;
-		var q = m1/m2;
-		var r2 = q*a/(1+q);
-		var r1 = a - r2;
 		
 		sphereWD.position.x = -r1;
 		disc.position.x = -r1;
@@ -131,7 +138,7 @@
 
 	  	
 		
-		camera.position.z = 2;
+		camera.position.z = 3;
 		camera.position.y = 0.3;
 		scene.add( camera );
 		
@@ -162,7 +169,7 @@
 		sphereMS.rotation.y = - ticker;
 		lights[0].position.x = sphereMS.radius*Math.cos(ticker);
 		lights[0].position.z = sphereMS.radius*Math.sin(ticker);
-		distortSphere(ticker * 40);
+		// distortSphere(ticker * 40);
 		// camera.rotation.z = ticker;
 		renderer.render( scene, camera );
 		ticker+= 0.004;
@@ -178,11 +185,11 @@
 			var z = sphereMS.geometry.vertices[i].z;
 			var r = Math.sqrt(x*x + y*y + z*z);
 			var theta = Math.acos(z/r);
-			var phi = Math.atan(y/x);
-			if (x<0 && y>0) phi+=Math.PI;
-			if (y<0 && x<0) phi+=Math.PI; 
+			var phi = Math.atan2(y, x);
+			//if (x<0 && y>0) phi+=Math.PI;
+			//if (y<0 && x<0) phi+=Math.PI; 
 			//console.log(r, theta, phi);
-			console.log(phi);
+			// console.log(phi);
 			r = 0.149 + .01 * Math.sin(4*phi + offset);
 			x = r * Math.sin(theta) * Math.cos(phi);
 			y = r * Math.sin(theta) * Math.sin(phi);
