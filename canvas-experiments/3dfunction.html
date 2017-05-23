@@ -30,9 +30,10 @@
 	var lights;
 	var renderer;
 	var plane;
+	var angle = 0;
+	var increment = 0.001;
 	
 	
-	var q = m2/m1;
 	var msol = 1.989e30;  	// Solar mass (kg)
 	var rsol = 695700000; 	// Solar radius (m)
 	var G = 6.678e-11;  	// Gravitational constant (m^3/kg/s^2)
@@ -40,13 +41,67 @@
 	
 	var m1 = 0.535 * msol;	// Primary mass (solar masses)
 	var m2 = 0.111 * msol;	// Secondary mass (solar masses)
+	var q = m2/m1;
 	var a = 0.434 * rsol;	// Semimajor axis (solar radii)
 	var T = 3600;    		// Period (s)
+	var primaryX = - a * m2 / (m1 + m2);
+	var secondaryX = a * m1 / (m1 + m2);
+	var secondary;
+	
+	console.log("X positions... Primary: " + primaryX/rsol + "  Secondary: " + secondaryX/rsol);
 	
 	var maxZ = 0;
 	var minZ = 0;
+	var z_values = [];
 	
-	function f(x, y, z) {
+	function derivative(fn, x, y, z, h, variable) {
+		return (fn(x + h, y, z) - fn(x - h, y, z)) / (2 * h);
+	}
+	
+	function getMaxOfArray(numArray) {
+	  return Math.max.apply(null, numArray);
+	}
+	
+	function getMinOfArray(numArray) {
+	  return Math.min.apply(null, numArray);
+	}
+	
+	function computeMedian(values) {
+	    values.sort( function(a,b) {return a - b;} );
+	    var half = Math.floor(values.length/2);
+	    if(values.length % 2)
+	        return values[half];
+	    else
+	        return (values[half-1] + values[half]) / 2.0;
+	}
+	
+	function computeDerivativeAlongX() {
+		var h = 0.01;
+		for (var x=-3; x<3; x=x+h) {
+			var deriv = derivative(potential, x, 0, 0, h, 0);
+			console.log("x: " + x + " deriv: " + deriv);
+		}
+	}
+	
+	function dPhidX(x) {
+		var h = 0.01;
+		return derivative(potential, x, 0, 0, h, 0);
+	}
+	
+	function findRoot(guess) {
+		var h = 0.01;
+		var delta = 20;
+		var limit = 1e-6;
+		while (delta>limit) {
+			var newguess = guess - dPhidX(guess) / derivative(dPhidX, guess, 0, 0, h, 0);
+			console.log("guess: " + guess + " new guess: " + newguess);
+			delta = Math.abs(newguess-guess);
+			guess = newguess;
+		}
+		return guess;
+	}
+	
+	function potential(x, y, z) {
 		//return Math.sqrt(x*x + y*y);
 		//return Math.cos(Math.abs(x)+Math.abs(y))*(Math.abs(x)+Math.abs(y))
 		x = x*rsol;
@@ -54,11 +109,25 @@
 		z = z*rsol;	
 		var xcm = a * m2 / (m1 + m2);
 		var omega = Math.PI * 2 / T;
-		var r1 = Math.sqrt(x*x + y*y + z*z);
-		var r2 = Math.sqrt((x-a)*(x-a) + y*y + z*z);
-		var potential = - G*m1/r1 - G*m2/r2 - omega*omega/2 * ( (x-xcm)*(x-xcm) + y*y);
-		console.log(potential);
-		return potential / 1953716102138.4692;
+		var r1 = Math.sqrt((x-primaryX)*(x-primaryX) + y*y + z*z);
+		var r2 = Math.sqrt((x-secondaryX)*(x-secondaryX) + y*y + z*z);
+		var potential;
+		if ((r1/rsol<0.05) || (r2/rsol<0.05)) {
+			potential = null;
+		}
+		else
+			potential = - G*m1/r1 - G*m2/r2 - omega*omega/2 * ( (x-xcm)*(x-xcm) + y*y);
+		z_values.push(potential);
+		return potential;
+	}
+	
+	function radialDerivative(fn, x, y, z, h) {
+		var r = Math.sqrt(x*x + y*y + z*z);
+		var theta = Math.acos(z/r);
+		var phi = Math.atan2(y, x);
+		
+		var dr = r + h;
+		
 	}
 	
 	function shiftVertices(model) {
@@ -66,9 +135,27 @@
 			var x = model.geometry.vertices[i].x;
 			var y = model.geometry.vertices[i].y;
 			var z = model.geometry.vertices[i].z;
-			var z = f(x, y, z);
+			var z = potential(x, y, z);
 			model.geometry.vertices[i].z = z;
 		}
+		
+		var minZ = getMinOfArray(z_values);
+		console.log(z_values);
+		for (var i in model.geometry.vertices) {
+			//console.log()
+			if (model.geometry.vertices[i].z == null) model.geometry.vertices[i].z = minZ;
+		}
+		for (var i in z_values) {
+			if (z_values[i] == null) z_values[i] = minZ;
+		}
+		var median = computeMedian(z_values);
+		var range = getMaxOfArray(z_values) - minZ;
+		
+		console.log("median: "+ median + "  range: " + range + " max: " + getMaxOfArray(z_values) + " min: " + minZ);
+		for (var i in model.geometry.vertices) {
+			model.geometry.vertices[i].z = (model.geometry.vertices[i].z - median) / range;
+		}
+		
 		model.geometry.verticesNeedUpdate = true;
 		model.geometry.normalsNeedUpdate = true;
 		model.geometry.computeBoundingSphere();
@@ -82,29 +169,47 @@
 		camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 0.1, 1000 );
 	    
 		var planeGeometry = new THREE.PlaneGeometry( 2, 2, 128, 128 );
-		var planeMaterial = new THREE.MeshPhongMaterial( {color: 0xaaaaaa, side: THREE.DoubleSide, wireframe: true} );
+		var planeMaterial = new THREE.MeshPhongMaterial( {color: 0x999999, side: THREE.DoubleSide, wireframe: true} );
 		plane = new THREE.Mesh( planeGeometry, planeMaterial );
 		shiftVertices(plane);
 		scene.add(plane);
 		
+		// computeDerivativeAlongX();
+		var L1distance = findRoot(0.0);
+		var L1potential = potential(L1distance, 0, 0);
+		console.log("Roche potential at L1 is: " + L1potential);
+		var secondaryRadius = secondaryX/rsol - L1distance;
+		console.log(secondaryRadius);
+		var secondaryGeometry = new THREE.SphereGeometry( secondaryRadius, 24, 24 );
+		var secondaryMaterial = new THREE.MeshLambertMaterial( {
+						color: 0xffc184, 
+						emissive: 0xffc184, 
+						map: THREE.ImageUtils.loadTexture('solar.gif',THREE.SphericalRefractionMapping)} );
+		secondary = new THREE.Mesh( secondaryGeometry, secondaryMaterial );
+		secondary.position.x = secondaryX/rsol;
+		scene.add(secondary);
+		
 		var light1 = new THREE.PointLight( 0xffc184, 1, 0 );
-		light1.position.set( 10, 20, 100 );
+		light1.position.set(10, 10, 10);
 		scene.add(light1);
 		var light2 = new THREE.AmbientLight( 0xffffff);
-		light2.position.set( 100, 200, -100 );
-		scene.add(light1);
+		light2.position.set( 10, 20, -10 );
+		//scene.add(light2);
 		
 		var pointLight = new THREE.PointLight( 0xffffff, 1, 100 );
-		pointLight.position.set( 10, 10, 20 );
+		pointLight.position.set( primaryX/rsol, 0, 2 );
 		scene.add( pointLight );
 
-		var sphereSize = 1;
+		var sphereSize = .1;
 		var pointLightHelper = new THREE.PointLightHelper( pointLight, sphereSize );
 		scene.add( pointLightHelper );
 		
-		camera.position.x = 1;
-		camera.position.z = 4;
+		camera.position.x = 0;
+		camera.position.y = -2;
+		camera.position.z = 1.4;
 		//camera.position.y = 30;
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
+		camera.updateProjectionMatrix();
 		scene.add(camera);
 		
 		// Add OrbitControls so that we can pan around with the mouse.
@@ -117,14 +222,19 @@
 		renderer.setSize( window.innerWidth, window.innerHeight );
 		document.body.appendChild(renderer.domElement);
 		initModels();
-		ticker = 0;
+		secondary.position.z = 0.1;
 		render();
 	}
 	
 	function render() {
-		
+		angle+= increment;
 		renderer.render(scene, camera);
-		plane.rotation.z+= 0.001;
+		plane.rotation.z = angle;
+		
+		secondary.position.x = secondaryX/rsol * Math.cos(angle);
+		secondary.position.y = secondaryX/rsol * Math.sin(angle);
+		secondary.rotation.z = angle;
+		
 		requestAnimationFrame( render );
 		
 	}
