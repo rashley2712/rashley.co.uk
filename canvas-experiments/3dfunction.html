@@ -121,12 +121,25 @@
 		return potential;
 	}
 	
-	function radialDerivative(fn, x, y, z, h) {
+	function radialDerivative(fn, x, y, z, h, xs, ys, zs) {
+		// In the frame of reference of the object
 		var r = Math.sqrt(x*x + y*y + z*z);
 		var theta = Math.acos(z/r);
 		var phi = Math.atan2(y, x);
 		
-		var dr = r + h;
+		var dr = h;
+		var dx = dr * Math.sin(theta)*Math.cos(phi);
+		var dy = dr * Math.sin(theta)*Math.sin(phi);
+		var dz = dr * Math.cos(theta);
+		
+		x = x + xs;
+		y = y + ys;
+		z = z + zs;
+		
+		var f2 = fn(x+dx, y+dy, z+dz); 
+		var f1 = fn(x-dx, y-dy, z-dz);
+		var derivative = (f2-f1)/(2*h);
+		return derivative;
 		
 	}
 	
@@ -179,7 +192,14 @@
 		var L1potential = potential(L1distance, 0, 0);
 		console.log("Roche potential at L1 is: " + L1potential);
 		var secondaryRadius = secondaryX/rsol - L1distance;
-		console.log(secondaryRadius);
+		console.log("Secondary radius at L1 is: " + secondaryRadius);
+		
+		var guessPosition = {};
+		guessPosition.x = - secondaryRadius;
+		guessPosition.y = 0;
+		guessPosition.z = 0;
+		var derivativeAtL1 = radialDerivative(potential, guessPosition.x, guessPosition.y, guessPosition.z, 0.01, secondaryX/rsol, 0, 0);
+		console.log("Radial derivative at L1: " + derivativeAtL1);
 		var secondaryGeometry = new THREE.SphereGeometry( secondaryRadius, 24, 24 );
 		var secondaryMaterial = new THREE.MeshLambertMaterial( {
 						color: 0xffc184, 
