@@ -47,6 +47,7 @@
 	var primaryX = - a * m2 / (m1 + m2);
 	var secondaryX = a * m1 / (m1 + m2);
 	var secondary;
+	var secondaryPosition = { 'x': 0, 'y': 0, 'z': 0};
 	
 	console.log("X positions... Primary: " + primaryX/rsol + "  Secondary: " + secondaryX/rsol);
 	
@@ -143,6 +144,39 @@
 		
 	}
 	
+	function findSolution(r, theta, phi, value) {
+		
+		var dr = 0.001;
+		var delta = 20;
+		var originalR = r;
+		while (delta>0.00001) {
+			r = originalR;
+			var x = r * Math.sin(theta)*Math.cos(phi);
+			var y = r * Math.sin(theta)*Math.sin(phi);
+			var z = r * Math.cos(theta);
+			x = x + secondaryPosition.x;
+			y = y + secondaryPosition.y;
+			z = z + secondaryPosition.z;
+			var rochePotential1 = potential(x, y, z);
+			//console.log("Roche potential1: " + rochePotential1);
+			r = r + dr;
+			x = r * Math.sin(theta)*Math.cos(phi);
+			y = r * Math.sin(theta)*Math.sin(phi);
+			z = r * Math.cos(theta);
+			x = x + secondaryPosition.x;
+			y = y + secondaryPosition.y;
+			z = z + secondaryPosition.z;
+			var rochePotential2 = potential(x, y, z);
+			//console.log("Roche potential2: " + rochePotential2);
+			var rocheDerivative = (rochePotential2 - rochePotential1) / dr;
+			var newR = originalR - (rochePotential1 - value)/rocheDerivative;
+			//console.log("r0: " + originalR + "   r1: " + newR); 
+			delta = Math.abs(newR - originalR);
+			originalR = newR;
+		}
+		return newR;
+	}
+	
 	function shiftVertices(model) {
 		for (var i in model.geometry.vertices) {
 			var x = model.geometry.vertices[i].x;
@@ -200,7 +234,12 @@
 		guessPosition.z = 0;
 		var derivativeAtL1 = radialDerivative(potential, guessPosition.x, guessPosition.y, guessPosition.z, 0.01, secondaryX/rsol, 0, 0);
 		console.log("Radial derivative at L1: " + derivativeAtL1);
-		var secondaryGeometry = new THREE.SphereGeometry( secondaryRadius, 24, 24 );
+		secondaryPosition.x = secondaryX/rsol;
+		secondaryPosition.y = 0;
+		secondaryPosition.z = 0;
+		
+			
+		var secondaryGeometry = new THREE.SphereGeometry( secondaryRadius, 50, 50 );
 		var secondaryMaterial = new THREE.MeshLambertMaterial( {
 						color: 0xffc184, 
 						emissive: 0xffc184, 
@@ -208,6 +247,25 @@
 		secondary = new THREE.Mesh( secondaryGeometry, secondaryMaterial );
 		secondary.position.x = secondaryX/rsol;
 		scene.add(secondary);
+		
+		
+		for (var i in secondary.geometry.vertices) {
+			//console.log(sphereMS.geometry.vertices[i])
+			var x = secondary.geometry.vertices[i].x;
+			var y = secondary.geometry.vertices[i].y;
+			var z = secondary.geometry.vertices[i].z;
+			var r = Math.sqrt(x*x + y*y + z*z);
+			var theta = Math.acos(z/r);
+			var phi = Math.atan2(y, x);
+			r = findSolution(r, theta, phi, L1potential);
+			console.log(r);
+			x = r * Math.sin(theta) * Math.cos(phi);
+			y = r * Math.sin(theta) * Math.sin(phi);
+			z = r * Math.cos(theta);
+			secondary.geometry.vertices[i].x = x;
+			secondary.geometry.vertices[i].y = y;
+			secondary.geometry.vertices[i].z = z;
+		}
 		
 		var light1 = new THREE.PointLight( 0xffc184, 1, 0 );
 		light1.position.set(10, 10, 10);
