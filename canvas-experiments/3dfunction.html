@@ -48,6 +48,7 @@
 	var secondaryX = a * m1 / (m1 + m2);
 	var secondary;
 	var secondaryPosition = { 'x': 0, 'y': 0, 'z': 0};
+	var primary;
 	
 	console.log("X positions... Primary: " + primaryX/rsol + "  Secondary: " + secondaryX/rsol);
 	
@@ -149,7 +150,7 @@
 		var dr = 0.001;
 		var delta = 20;
 		var originalR = r;
-		while (delta>0.00001) {
+		while (delta>0.0001) {
 			r = originalR;
 			var x = r * Math.sin(theta)*Math.cos(phi);
 			var y = r * Math.sin(theta)*Math.sin(phi);
@@ -267,6 +268,13 @@
 			secondary.geometry.vertices[i].z = z;
 		}
 		
+		var WDgeometry = new THREE.SphereGeometry( 0.02, 32, 32 );
+		var WDmaterial = new THREE.MeshLambertMaterial( {color: 0x9fbfff, emissive: 0x9fbfff, emmissiveIntensity: 2} );
+		primary = new THREE.Mesh( WDgeometry, WDmaterial );
+		primary.position.x = primaryX/rsol;
+		scene.add(primary);
+	
+		
 		var light1 = new THREE.PointLight( 0xffc184, 1, 0 );
 		light1.position.set(10, 10, 10);
 		scene.add(light1);
@@ -312,6 +320,9 @@
 		secondary.position.x = secondaryX/rsol * Math.cos(angle);
 		secondary.position.y = secondaryX/rsol * Math.sin(angle);
 		secondary.rotation.z = angle;
+		
+		primary.position.x = primaryX/rsol * Math.cos(angle);
+		primary.position.y = primaryX/rsol * Math.sin(angle);
 		
 		requestAnimationFrame( render );
 		
